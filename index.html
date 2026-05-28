@@ -207,16 +207,6 @@ header {
   color: var(--muted); text-align: center; line-height: 2.2; max-width: 220px;
 }
 
-#refThumb {
-  position: absolute; top: 12px; right: 12px;
-  width: 48px; height: 62px;
-  object-fit: cover;
-  border: 1.5px solid var(--accent); border-radius: 5px;
-  display: none; box-shadow: 0 0 14px rgba(212,255,62,0.25);
-  z-index: 5; cursor: pointer;
-}
-#refThumb.show { display: block; }
-
 #modeTag {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
   font-family: 'Space Mono', monospace; font-size: 8px;
@@ -544,7 +534,6 @@ input[type=range]::-webkit-slider-thumb {
         <p>CAMERA DENIED<br>Allow permissions & reload</p>
       </div>
 
-      <img id="refThumb" title="Tap to reset"/>
       <div id="modeTag">GHOST MODE</div>
       <div id="flashOverlay"></div>
 
@@ -694,7 +683,6 @@ const opSlider   = document.getElementById('opacitySlider');
 const scSlider   = document.getElementById('scaleSlider');
 const opVal      = document.getElementById('opacityVal');
 const scVal      = document.getElementById('scaleVal');
-const refThumb   = document.getElementById('refThumb');
 const emptyState = document.getElementById('emptyState');
 const noCamMsg   = document.getElementById('noCamMsg');
 const flashEl    = document.getElementById('flashOverlay');
@@ -862,7 +850,6 @@ fileInput.addEventListener('change', e => {
   const img = new Image();
   img.onload = () => {
     S.refImage = img; S.offsetX = 0; S.offsetY = 0;
-    refThumb.src = url; refThumb.classList.add('show');
     refPill.textContent = 'REF ON'; refPill.classList.add('live');
     log(`Ref loaded: ${img.naturalWidth}×${img.naturalHeight}px`, 'success');
     computeEdgeMap(img);
@@ -1141,7 +1128,8 @@ captureBtn.addEventListener('click', () => {
   if (S.facing === 'user') { tCtx.translate(tmp.width,0); tCtx.scale(-1,1); }
   tCtx.drawImage(video,0,0,tmp.width,tmp.height);
   tCtx.restore();
-  tCtx.drawImage(canvas,0,0);
+  // Overlay is intentionally NOT drawn into the saved image —
+  // the on-screen ref stays visible, but the downloaded photo is clean.
 
   tmp.toBlob(blob=>{
     const fname=`poseframe_${Date.now()}.jpg`;
@@ -1151,14 +1139,6 @@ captureBtn.addEventListener('click', () => {
     log(`Saved: ${fname} — ${(blob.size/1024).toFixed(1)} KB`,'capture');
     showToast('📸 PHOTO SAVED');
   },'image/jpeg',0.95);
-});
-
-// ── REF THUMB RESET ──
-refThumb.addEventListener('click', () => {
-  S.offsetX=0; S.offsetY=0;
-  scSlider.value=100; S.scale=1; scVal.textContent='100%';
-  log('Overlay reset to center','info');
-  showToast('RESET');
 });
 
 canvas.style.cursor='crosshair';
