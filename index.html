@@ -152,9 +152,12 @@ header {
 #cameraVideo {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transform: scaleX(-1);
+  background: #000;
 }
+/* In immersive/fullscreen mode, fill the screen edge-to-edge */
+#app.immersive #cameraVideo { object-fit: cover; }
 #overlayCanvas {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -793,13 +796,13 @@ async function startCamera() {
   try {
     try {
       S.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode:{ exact:S.facing }, width:{ideal:1280}, height:{ideal:720} },
+        video: { facingMode:{ exact:S.facing }, width:{ideal:1920}, height:{ideal:1080} },
         audio: false
       });
     } catch (innerErr) {
       log(`${S.facing} cam (exact) unavailable, falling back…`, 'warn');
       S.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode:S.facing, width:{ideal:1280}, height:{ideal:720} },
+        video: { facingMode:S.facing, width:{ideal:1920}, height:{ideal:1080} },
         audio: false
       });
     }
@@ -814,7 +817,8 @@ async function startCamera() {
     startRenderLoop();
     const label = S.stream.getVideoTracks()[0]?.label || 'unknown';
     log(`Camera ON — ${label}`, 'success');
-    log(`Resolution target: 1280×720`, 'cam');
+    const settings = S.stream.getVideoTracks()[0]?.getSettings?.() || {};
+    log(`Resolution: ${settings.width||'?'}×${settings.height||'?'}`, 'cam');
     showToast('CAMERA ACTIVE');
   } catch(e) {
     noCamMsg.classList.add('show');
@@ -1121,12 +1125,15 @@ captureBtn.addEventListener('click', () => {
   flashEl.classList.add('flash');
   setTimeout(()=>flashEl.classList.remove('flash'),140);
 
-  const tmp=document.createElement('canvas');
-  tmp.width=canvas.width; tmp.height=canvas.height;
-  const tCtx=tmp.getContext('2d');
+  // Capture at the camera's NATIVE resolution, not the viewport size.
+  const vw = video.videoWidth  || canvas.width;
+  const vh = video.videoHeight || canvas.height;
+  const tmp = document.createElement('canvas');
+  tmp.width = vw; tmp.height = vh;
+  const tCtx = tmp.getContext('2d');
   tCtx.save();
-  if (S.facing === 'user') { tCtx.translate(tmp.width,0); tCtx.scale(-1,1); }
-  tCtx.drawImage(video,0,0,tmp.width,tmp.height);
+  if (S.facing === 'user') { tCtx.translate(vw,0); tCtx.scale(-1,1); }
+  tCtx.drawImage(video,0,0,vw,vh);
   tCtx.restore();
   // Overlay is intentionally NOT drawn into the saved image —
   // the on-screen ref stays visible, but the downloaded photo is clean.
