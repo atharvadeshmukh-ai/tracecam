@@ -2,1160 +2,1609 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>PoseFrame</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Pipeline Playground</title>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #0d0f14;
+    --surface:   #141720;
+    --panel:     #1a1e2a;
+    --border:    #252a38;
+    --accent:    #00e5a0;
+    --accent2:   #5b8def;
+    --warn:      #f0a040;
+    --danger:    #e05555;
+    --text:      #d4daf0;
+    --muted:     #5a6280;
+    --tag-bg:    #1e2436;
 
-:root {
-  --bg: #080810;
-  --surface: #10101c;
-  --panel: #16162a;
-  --border: #252540;
-  --accent: #d4ff3e;
-  --accent2: #3ec8ff;
-  --accent3: #ff3ea0;
-  --text: #eeeeff;
-  --muted: #5a5a80;
-  --glow: rgba(212,255,62,0.12);
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-ui:   'Inter', system-ui, sans-serif;
+  }
 
-html, body {
-  height: 100%; width: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Syne', sans-serif;
-  overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-body::after {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-  pointer-events: none; z-index: 9998;
-}
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
 
-/* ─── ROOT LAYOUT ─── */
-#app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  padding-top: var(--safe-top);
-  padding-bottom: var(--safe-bottom);
-}
+  /* ── top bar ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
 
-/* ─── HEADER ─── */
-header {
-  flex-shrink: 0;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  z-index: 20;
-  gap: 8px;
-}
+  .logo {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
 
-.logo {
-  font-family: 'Space Mono', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: var(--accent);
-  display: flex; align-items: center; gap: 7px;
-  flex-shrink: 0;
-}
-.logo-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
-  animation: blink 2s ease-in-out infinite;
-}
-@keyframes blink {
-  0%,100% { opacity:1; box-shadow: 0 0 10px var(--accent); }
-  50% { opacity:0.4; box-shadow: 0 0 3px var(--accent); }
-}
+  .logo span { color: var(--muted); }
 
-.pills {
-  display: flex; gap: 5px; align-items: center; flex: 1; justify-content: center;
-}
-.pill {
-  font-family: 'Space Mono', monospace;
-  font-size: 8px;
-  letter-spacing: 0.07em;
-  padding: 3px 7px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.pill.live { border-color: #3eff8a; color: #3eff8a; }
+  header .badge {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
 
-#logToggleBtn {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 5px;
-  color: var(--muted);
-  font-family: 'Space Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  transition: border-color 0.2s, color 0.2s;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-#logToggleBtn:hover, #logToggleBtn.active {
-  border-color: var(--accent2); color: var(--accent2);
-}
-#logToggleBtn svg { width: 12px; height: 12px; stroke: currentColor; flex-shrink: 0; }
+  /* ── layout ── */
+  .workspace {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: calc(100vh - 53px);
+  }
 
-#logBadge {
-  background: var(--accent3); color: #000;
-  border-radius: 10px; padding: 1px 5px;
-  font-size: 8px; min-width: 16px; text-align: center;
-  display: none;
-}
-#logBadge.show { display: inline-block; }
+  /* ── sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
 
-/* ─── MAIN ─── */
-#main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: .14em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
 
-/* ─── VIEWPORT ─── */
-#viewport {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: #000;
-  min-height: 0;
-}
+  /* card */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 14px 16px;
+  }
 
-#cameraVideo {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: contain;
-  transform: scaleX(-1);
-  background: #000;
-}
-/* In immersive/fullscreen mode, fill the screen edge-to-edge */
-#app.immersive #cameraVideo { object-fit: cover; }
-#overlayCanvas {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  touch-action: none;
-}
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
 
-#grid {
-  position: absolute; inset: 0;
-  pointer-events: none; opacity: 0;
-  background-image:
-    linear-gradient(rgba(62,200,255,0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(62,200,255,0.3) 1px, transparent 1px);
-  background-size: 33.33% 33.33%;
-  transition: opacity 0.3s;
-}
-#grid.on { opacity: 1; }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: .02em;
+  }
 
-.corner {
-  position: absolute;
-  width: 20px; height: 20px;
-  border-color: var(--accent); border-style: solid; opacity: 0.6;
-}
-.corner.tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
-.corner.tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
-.corner.bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
-.corner.br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+  .step-num {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #000;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
 
-#emptyState {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px;
-  pointer-events: none; transition: opacity 0.3s;
-}
-#emptyState.hidden { opacity: 0; }
-.empty-icon { font-size: 36px; opacity: 0.2; }
-.empty-text {
-  font-family: 'Space Mono', monospace;
-  font-size: 9px; color: var(--muted);
-  letter-spacing: 0.14em; text-align: center; line-height: 2.2;
-}
+  /* toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
 
-#noCamMsg {
-  position: absolute; inset: 0;
-  display: none; align-items: center; justify-content: center;
-  flex-direction: column; gap: 10px; background: var(--bg);
-}
-#noCamMsg.show { display: flex; }
-#noCamMsg p {
-  font-family: 'Space Mono', monospace; font-size: 9px;
-  color: var(--muted); text-align: center; line-height: 2.2; max-width: 220px;
-}
+  .toggle-label { font-size: 12px; color: var(--text); }
 
-#modeTag {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-  font-family: 'Space Mono', monospace; font-size: 8px;
-  letter-spacing: 0.16em; color: var(--accent);
-  background: rgba(8,8,16,0.8);
-  border: 1px solid var(--accent);
-  padding: 3px 10px; border-radius: 20px;
-  pointer-events: none; opacity: 0; transition: opacity 0.3s;
-  backdrop-filter: blur(8px); white-space: nowrap;
-}
-#modeTag.show { opacity: 1; }
+  .toggle {
+    position: relative;
+    width: 36px; height: 20px;
+    cursor: pointer;
+  }
 
-#flashOverlay {
-  position: absolute; inset: 0;
-  background: #fff; opacity: 0;
-  pointer-events: none; z-index: 20; transition: opacity 0.06s;
-}
-#flashOverlay.flash { opacity: 0.85; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
 
-/* ─── FLOATING CONTROLS OVER CAMERA FRAME ─── */
-#viewportControls {
-  position: absolute;
-  bottom: 14px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; align-items: center; gap: 18px;
-  z-index: 15;
-}
-.vp-btn {
-  width: 42px; height: 42px;
-  border-radius: 50%;
-  background: rgba(16,16,28,0.6);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-  color: var(--text);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-.vp-btn:hover, .vp-btn:active { border-color: var(--accent2); }
-.vp-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .toggle .track {
+    position: absolute; inset: 0;
+    background: var(--border);
+    border-radius: 10px;
+    transition: background .2s;
+  }
 
-#vpCaptureBtn {
-  width: 58px; height: 58px;
-  border-radius: 50%;
-  border: 3px solid var(--accent);
-  background: rgba(8,8,16,0.45);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 0 16px var(--glow);
-  position: relative; cursor: pointer;
-}
-#vpCaptureBtn::after {
-  content: ''; position: absolute; inset: 5px;
-  border-radius: 50%; background: var(--accent);
-}
-#vpCaptureBtn:active { transform: scale(0.9); }
-#vpCaptureBtn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .toggle input:checked ~ .track { background: var(--accent); }
 
-/* ─── LOG PANEL ─── */
-#logPanel {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 50%;
-  background: rgba(8,8,18,0.97);
-  border-top: 1px solid var(--border);
-  backdrop-filter: blur(24px);
-  display: flex; flex-direction: column;
-  transform: translateY(102%);
-  transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
-  z-index: 30;
-  border-radius: 14px 14px 0 0;
-  box-shadow: 0 -20px 60px rgba(0,0,0,0.6);
-}
-#logPanel.open { transform: translateY(0); }
+  .toggle .thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left .2s;
+  }
 
-/* Drag handle */
-.log-handle {
-  width: 36px; height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  margin: 10px auto 4px;
-  flex-shrink: 0;
-}
+  .toggle input:checked ~ .thumb { left: 19px; }
 
-.log-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 14px 8px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.log-title {
-  font-family: 'Space Mono', monospace;
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 0.2em; color: var(--accent2);
-  display: flex; align-items: center; gap: 7px;
-}
-.log-title-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--accent2); box-shadow: 0 0 7px var(--accent2);
-  animation: blink 1.5s ease-in-out infinite;
-}
-.log-actions { display: flex; gap: 6px; align-items: center; }
+  /* select */
+  select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    padding: 7px 10px;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235a6280' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
 
-.log-action-btn {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 6px; padding: 4px 9px;
-  font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 0.1em;
-  color: var(--muted); cursor: pointer; transition: border-color 0.2s, color 0.2s;
-}
-.log-action-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+  select:focus { border-color: var(--accent); }
 
-.log-close-btn {
-  background: none; border: none;
-  color: var(--muted); cursor: pointer;
-  font-size: 20px; line-height: 1;
-  padding: 0 4px; transition: color 0.2s;
-}
-.log-close-btn:hover { color: var(--text); }
+  /* slider */
+  .slider-row { margin-top: 12px; }
 
-.log-filters {
-  display: flex; gap: 4px;
-  padding: 7px 14px 5px;
-  flex-shrink: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.log-filters::-webkit-scrollbar { display: none; }
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
 
-.filter-tab {
-  font-family: 'Space Mono', monospace;
-  font-size: 8px; letter-spacing: 0.1em;
-  padding: 3px 9px; border-radius: 12px;
-  border: 1px solid var(--border);
-  color: var(--muted); cursor: pointer;
-  background: none; transition: all 0.2s;
-  white-space: nowrap; flex-shrink: 0;
-}
-.filter-tab.active { border-color: var(--accent2); color: var(--accent2); background: rgba(62,200,255,0.08); }
+  .slider-name { font-size: 11px; color: var(--muted); }
 
-#logScroll {
-  flex: 1; overflow-y: auto;
-  padding: 4px 0;
-  scroll-behavior: smooth;
-}
-#logScroll::-webkit-scrollbar { width: 3px; }
-#logScroll::-webkit-scrollbar-track { background: transparent; }
-#logScroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .slider-val {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+  }
 
-.log-entry {
-  display: flex; gap: 8px; align-items: flex-start;
-  padding: 4px 14px;
-}
-.log-entry:hover { background: rgba(255,255,255,0.02); }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
 
-.log-ts {
-  font-family: 'Space Mono', monospace;
-  font-size: 8px; color: var(--muted);
-  letter-spacing: 0.03em; flex-shrink: 0;
-  padding-top: 1px; width: 52px;
-}
-.log-icon { font-size: 10px; flex-shrink: 0; line-height: 1.6; }
-.log-msg {
-  font-family: 'Space Mono', monospace;
-  font-size: 10px; letter-spacing: 0.04em; line-height: 1.6;
-  word-break: break-all;
-}
-.log-entry.info .log-msg { color: var(--text); }
-.log-entry.success .log-msg { color: #3eff8a; }
-.log-entry.warn .log-msg { color: #ffcc3e; }
-.log-entry.error .log-msg { color: var(--accent3); }
-.log-entry.cam .log-msg { color: var(--accent2); }
-.log-entry.capture .log-msg { color: var(--accent); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    transition: transform .1s;
+  }
 
-/* ─── CONTROLS ─── */
-#controls {
-  flex-shrink: 0;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  z-index: 10;
-}
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
-#slidersStrip { display: flex; flex-direction: column; }
+  /* disabled overlay for cards */
+  .card.disabled { opacity: .45; pointer-events: none; }
 
-.slider-row {
-  display: flex; align-items: center;
-  gap: 10px; padding: 7px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-}
-.slider-label {
-  font-family: 'Space Mono', monospace;
-  font-size: 8px; letter-spacing: 0.1em;
-  color: var(--muted); text-transform: uppercase;
-  width: 50px; flex-shrink: 0;
-}
-input[type=range] {
-  -webkit-appearance: none; flex: 1;
-  height: 2px; background: var(--border);
-  border-radius: 2px; outline: none; cursor: pointer;
-}
-input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 20px; height: 20px; /* larger for mobile touch */
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
-  cursor: pointer;
-}
-.slider-val {
-  font-family: 'Space Mono', monospace;
-  font-size: 9px; color: var(--accent);
-  width: 30px; text-align: right; flex-shrink: 0;
-}
+  /* sub-hint */
+  .hint {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.4;
+  }
 
-.color-row {
-  display: flex; align-items: center;
-  gap: 10px; padding: 7px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.color-dots { display: flex; gap: 8px; align-items: center; }
-.color-dot {
-  width: 18px; height: 18px; border-radius: 50%;
-  cursor: pointer; border: 2px solid transparent;
-  transition: transform 0.15s, border-color 0.15s;
-}
-.color-dot:hover, .color-dot:active { transform: scale(1.25); }
-.color-dot.selected { border-color: #fff; }
+  /* tag chips */
+  .chip {
+    display: inline-block;
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 6px;
+    margin-right: 4px;
+  }
 
-/* Action bar */
-#actionBar {
-  display: flex; align-items: center;
-  padding: 8px 10px; gap: 6px;
-}
+  /* ── main panel ── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
-.act-btn {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 3px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 7px 4px;
-  cursor: pointer; color: var(--text);
-  font-family: inherit;
-  transition: border-color 0.2s, background 0.2s;
-  flex: 1; min-width: 0;
-}
-.act-btn:hover, .act-btn:active { border-color: var(--accent); background: var(--glow); }
-.act-btn.active { border-color: var(--accent); background: var(--glow); }
-.act-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
-.act-btn span {
-  font-family: 'Space Mono', monospace;
-  font-size: 6px; letter-spacing: 0.08em;
-  color: var(--muted); text-transform: uppercase;
-  white-space: nowrap; overflow: hidden;
-  text-overflow: ellipsis; max-width: 100%;
-}
+  /* pipeline viz */
+  .pipeline-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
 
-#uploadBtn { border-color: rgba(62,200,255,0.4); }
-#uploadBtn svg { stroke: var(--accent2); }
+  .pipe-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 80px;
+  }
 
-/* ─── TOAST ─── */
-#toast {
-  position: fixed; bottom: 120px; left: 50%;
-  transform: translateX(-50%) translateY(14px);
-  background: var(--panel);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font-family: 'Space Mono', monospace;
-  font-size: 9px; letter-spacing: 0.1em;
-  padding: 7px 16px; border-radius: 30px;
-  opacity: 0; transition: opacity 0.25s, transform 0.25s;
-  pointer-events: none; z-index: 9999; white-space: nowrap;
-}
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .pipe-icon {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: border-color .2s, background .2s;
+    background: var(--panel);
+    position: relative;
+  }
 
-#fileInput { display: none; }
-#processCanvas { display: none; }
+  .pipe-icon.active {
+    border-color: var(--accent);
+    background: rgba(0,229,160,.08);
+    box-shadow: 0 0 12px rgba(0,229,160,.15);
+  }
 
-/* ─── IMMERSIVE / FULLSCREEN CAMERA MODE ─── */
-#app.immersive header,
-#app.immersive #controls { display: none; }
-#app.immersive #main { height: 100vh; height: 100dvh; }
+  .pipe-icon.inactive {
+    opacity: .3;
+  }
+
+  .pipe-label {
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    text-align: center;
+  }
+
+  .pipe-arrow {
+    color: var(--border);
+    font-size: 16px;
+    padding: 0 4px;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+  }
+
+  /* visualizer area */
+  .viz-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 24px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  /* mic button */
+  .mic-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .mic-btn {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s, transform .1s;
+    flex-shrink: 0;
+  }
+
+  .mic-btn:hover { background: rgba(0,229,160,.1); }
+  .mic-btn.recording {
+    background: rgba(0,229,160,.15);
+    border-color: var(--accent);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,160,.3); }
+    50%       { box-shadow: 0 0 0 10px rgba(0,229,160,0); }
+  }
+
+  .mic-status {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mic-status-line {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .mic-status-line strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* meters */
+  .meters-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .meter-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .meter-title {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: .1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .meter-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .meter-value.warn { color: var(--warn); }
+  .meter-value.danger { color: var(--danger); }
+
+  .bar-track {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: width .08s linear;
+  }
+
+  .bar-fill.warn { background: var(--warn); }
+  .bar-fill.danger { background: var(--danger); }
+
+  /* waveform canvas */
+  .waveform-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .waveform-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .waveform-title {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+
+  .speech-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    background: var(--tag-bg);
+    color: var(--muted);
+    transition: background .2s, color .2s;
+  }
+
+  .speech-pill.active {
+    background: rgba(0,229,160,.15);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,.3);
+  }
+
+  .speech-pill.model {
+    background: rgba(91,141,239,.15);
+    color: var(--accent2);
+    border: 1px solid rgba(91,141,239,.35);
+  }
+
+  canvas {
+    width: 100%;
+    height: 80px;
+    display: block;
+    border-radius: 4px;
+    background: var(--bg);
+  }
+
+  /* log */
+  .log-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .log-title {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+
+  .clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-size: 10px;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+
+  .clear-btn:hover { color: var(--text); border-color: var(--text); }
+
+  #log {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    height: 130px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .log-line { display: flex; gap: 8px; }
+
+  .log-time { color: var(--border); flex-shrink: 0; }
+
+  .log-msg.speech  { color: var(--accent); }
+  .log-msg.silence { color: var(--muted); }
+  .log-msg.noise   { color: var(--warn); }
+  .log-msg.system  { color: var(--accent2); }
+  .log-msg.error   { color: var(--danger); }
+
+  /* vad detail */
+  .vad-detail {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .vad-prop {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .vad-prop span { color: var(--text); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ── responsive ── */
+  @media (max-width: 768px) {
+    .workspace { grid-template-columns: 1fr; }
+    .sidebar { max-height: 60vh; }
+    .meters-grid { grid-template-columns: 1fr; }
+  }
+
+  .select-wrap { position: relative; }
+
+  /* vad description tooltip */
+  .vad-desc {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.5;
+    border-left: 2px solid var(--border);
+    padding-left: 8px;
+  }
+
+  /* mic permission warning */
+  .perm-warn {
+    background: rgba(240,160,64,.08);
+    border: 1px solid rgba(240,160,64,.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--warn);
+    display: none;
+  }
+
+  .consecutive-row { margin-top: 10px; }
+
+  .separator {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0 8px;
+  }
 </style>
 </head>
 <body>
-<div id="app">
 
-  <!-- HEADER -->
-  <header>
-    <div class="logo">
-      <div class="logo-dot"></div>
-      PoseFrame
+<header>
+  <div class="logo">Voice<span>/</span>Pipeline <span>Playground</span></div>
+  <div class="badge">LIVE · BROWSER-NATIVE</div>
+</header>
+
+<div class="workspace">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- VAD -->
+    <div>
+      <div class="section-label">① Voice Activity Detection</div>
+      <div class="card" id="card-vad">
+        <div class="card-header">
+          <div class="step-num">1</div>
+          <div class="card-title">VAD Engine</div>
+          <label class="toggle" style="margin-left:auto">
+            <input type="checkbox" id="vad-enabled" checked>
+            <div class="track"></div>
+            <div class="thumb"></div>
+          </label>
+        </div>
+
+        <div class="select-wrap">
+          <select id="vad-model">
+            <option value="ten">TEN VAD  (agent-tuned, ONNX/WASM · ~330 KB)</option>
+            <option value="silero">Silero VAD  (LSTM, ONNX · ~1.8 MB)</option>
+            <option value="webrtc">WebRTC VAD  (GMM energy · ~150 KB)</option>
+            <option value="cobra">Picovoice Cobra  (on-device ML · ~2 MB)</option>
+            <option value="tiny">Tiny Noise-Robust VAD  (spectral gating · &lt;50 KB)</option>
+          </select>
+        </div>
+
+        <div id="vad-desc" class="vad-desc"></div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Speech Threshold</span>
+            <span class="slider-val" id="thresh-val">0.70</span>
+          </div>
+          <input type="range" id="thresh" min="0.1" max="0.99" step="0.01" value="0.70">
+        </div>
+
+        <div class="slider-row consecutive-row">
+          <div class="slider-header">
+            <span class="slider-name">Consecutive frames (ms)</span>
+            <span class="slider-val" id="consec-val">200 ms</span>
+          </div>
+          <input type="range" id="consec" min="0" max="600" step="20" value="200">
+        </div>
+
+        <div class="slider-row consecutive-row">
+          <div class="slider-header">
+            <span class="slider-name">Smoothing (EMA α)</span>
+            <span class="slider-val" id="smooth-val">0.75</span>
+          </div>
+          <input type="range" id="smooth" min="0" max="0.95" step="0.05" value="0.75">
+        </div>
+
+        <p class="hint">Smoothing rejects short bursts (cough, click, keyboard). Hysteresis: enters speech at threshold, exits ~30% lower to avoid flapping.</p>
+      </div>
     </div>
-    <div class="pills">
-      <span id="camPill" class="pill">CAM OFF</span>
-      <span id="refPill" class="pill">NO REF</span>
+
+    <!-- Noise Suppression -->
+    <div>
+      <div class="section-label">② Neural Noise Suppression</div>
+      <div class="card" id="card-ns">
+        <div class="card-header">
+          <div class="step-num" style="background:var(--accent2)">2</div>
+          <div class="card-title">Noise Suppressor</div>
+          <label class="toggle" style="margin-left:auto">
+            <input type="checkbox" id="ns-enabled">
+            <div class="track"></div>
+            <div class="thumb"></div>
+          </label>
+        </div>
+
+        <div id="ns-controls">
+          <div class="select-wrap">
+            <select id="ns-model">
+              <option value="rnnoise">RNNoise  (recurrent NN, 48 kHz)</option>
+              <option value="deepfilter">DeepFilterNet  (dual-stage, 48 kHz)</option>
+              <option value="krisp">Krisp  (cloud-hybrid)</option>
+              <option value="maxine">NVIDIA Maxine  (GPU-accelerated)</option>
+            </select>
+          </div>
+
+          <div class="slider-row" style="margin-top:10px">
+            <div class="slider-header">
+              <span class="slider-name">Suppression Strength</span>
+              <span class="slider-val" id="ns-str-val">0.75</span>
+            </div>
+            <input type="range" id="ns-strength" min="0" max="1" step="0.05" value="0.75">
+          </div>
+
+          <p class="hint">Simulated in-browser via a gain envelope on the audio graph. Real implementations swap a WASM/Worker node here.</p>
+        </div>
+      </div>
     </div>
-    <button id="logToggleBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
-        <path d="M4 6h16M4 12h16M4 18h10"/>
-      </svg>
-      LOG
-      <span id="logBadge">0</span>
-    </button>
-  </header>
 
-  <!-- MAIN -->
-  <div id="main">
+    <!-- Speaker Separation -->
+    <div>
+      <div class="section-label">③ Speaker Separation</div>
+      <div class="card" id="card-ss">
+        <div class="card-header">
+          <div class="step-num" style="background:#9b6ef3">3</div>
+          <div class="card-title">Speaker Sep.</div>
+          <label class="toggle" style="margin-left:auto">
+            <input type="checkbox" id="ss-enabled">
+            <div class="track"></div>
+            <div class="thumb"></div>
+          </label>
+        </div>
 
-    <!-- VIEWPORT -->
-    <div id="viewport">
-      <video id="cameraVideo" autoplay playsinline muted></video>
-      <canvas id="overlayCanvas"></canvas>
-      <div id="grid"></div>
+        <div id="ss-controls">
+          <div class="select-wrap">
+            <select id="ss-mode">
+              <option value="embed">Speaker Embeddings (d-vector)</option>
+              <option value="verify">Speaker Verification</option>
+              <option value="separate">Voice Separation (Conv-TasNet)</option>
+            </select>
+          </div>
 
-      <div class="corner tl"></div>
-      <div class="corner tr"></div>
-      <div class="corner bl"></div>
-      <div class="corner br"></div>
+          <div class="slider-row" style="margin-top:10px">
+            <div class="slider-header">
+              <span class="slider-name">Similarity Threshold</span>
+              <span class="slider-val" id="ss-thresh-val">0.60</span>
+            </div>
+            <input type="range" id="ss-thresh" min="0.1" max="0.99" step="0.01" value="0.60">
+          </div>
 
-      <div id="emptyState">
-        <div class="empty-icon">📷</div>
-        <div class="empty-text">TAP "CAMERA" TO START<br>THEN LOAD A REFERENCE</div>
+          <p class="hint">Frames below similarity score are suppressed before reaching VAD. Simulated here — real systems embed an ECAPA-TDNN or similar.</p>
+        </div>
       </div>
-      <div id="noCamMsg">
-        <div class="empty-icon">🚫</div>
-        <p>CAMERA DENIED<br>Allow permissions & reload</p>
+    </div>
+
+    <!-- STT (Deepgram) -->
+    <div>
+      <div class="section-label">⑤ Speech-to-Text (Deepgram)</div>
+      <div class="card" id="card-stt">
+        <div class="card-header">
+          <div class="step-num" style="background:#e05555">5</div>
+          <div class="card-title">Deepgram STT</div>
+          <label class="toggle" style="margin-left:auto">
+            <input type="checkbox" id="stt-enabled">
+            <div class="track"></div>
+            <div class="thumb"></div>
+          </label>
+        </div>
+
+        <div id="stt-controls">
+          <div class="select-wrap" style="margin-bottom:10px">
+            <select id="stt-model">
+              <option value="nova-3">nova-3 (latest, keyterm-boosting)</option>
+              <option value="nova-2">nova-2</option>
+              <option value="nova-2-general">nova-2-general</option>
+              <option value="enhanced">enhanced</option>
+              <option value="base">base</option>
+            </select>
+          </div>
+
+          <div class="slider-row" style="margin-top:0">
+            <div class="slider-header">
+              <span class="slider-name">Deepgram API Key</span>
+              <span class="slider-val" id="stt-key-status">not set</span>
+            </div>
+            <input type="password" id="stt-key" placeholder="dg_..." style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:7px 10px;outline:none">
+          </div>
+
+          <div class="toggle-row" style="margin-top:12px;margin-bottom:0">
+            <span class="toggle-label" style="font-size:11px;color:var(--muted)">Interim results</span>
+            <label class="toggle">
+              <input type="checkbox" id="stt-interim" checked>
+              <div class="track"></div>
+              <div class="thumb"></div>
+            </label>
+          </div>
+
+          <p class="hint">Streams 16-kHz linear-PCM over WebSocket to <code style="color:var(--accent2)">api.deepgram.com/v1/listen</code>. Gated by VAD — only sends frames while speech is detected.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- AEC -->
+    <div>
+      <div class="section-label">④ Echo Cancellation (AEC)</div>
+      <div class="card" id="card-aec">
+        <div class="card-header">
+          <div class="step-num" style="background:var(--warn);color:#000">4</div>
+          <div class="card-title">AEC</div>
+          <label class="toggle" style="margin-left:auto">
+            <input type="checkbox" id="aec-enabled">
+            <div class="track"></div>
+            <div class="thumb"></div>
+          </label>
+        </div>
+
+        <div id="aec-controls">
+          <div class="select-wrap">
+            <select id="aec-mode">
+              <option value="browser">Browser nativeConstraints echoCancellation</option>
+              <option value="webrtc">WebRTC AEC3</option>
+              <option value="speex">SpeexDSP (NLMS)</option>
+            </select>
+          </div>
+
+          <div class="slider-row" style="margin-top:10px">
+            <div class="slider-header">
+              <span class="slider-name">Suppression (dB)</span>
+              <span class="slider-val" id="aec-db-val">−24 dB</span>
+            </div>
+            <input type="range" id="aec-db" min="0" max="40" step="1" value="24">
+          </div>
+
+          <p class="hint">When your agent speaks through a speaker, AEC strips its own playback voice from the mic before VAD sees it.</p>
+          <div class="chip">Echo Tail: 128 ms</div>
+          <div class="chip">Double-talk OK</div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- pipeline strip -->
+    <div class="pipeline-bar" id="pipeline-bar">
+      <!-- nodes inserted by JS -->
+    </div>
+
+    <div class="viz-area">
+
+      <div class="perm-warn" id="perm-warn">
+        ⚠ Microphone permission denied or unavailable. Using simulated audio for demo.
       </div>
 
-      <div id="modeTag">GHOST MODE</div>
-      <div id="flashOverlay"></div>
-
-      <!-- Floating controls overlaid on the camera frame -->
-      <div id="viewportControls">
-        <button class="vp-btn" id="vpFsBtn" title="Toggle fullscreen">
-          <svg id="vpFsIcon" viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"/></svg>
-        </button>
-        <button id="vpCaptureBtn" disabled title="Capture & download"></button>
+      <!-- mic control -->
+      <div class="mic-row">
+        <button class="mic-btn" id="mic-btn" title="Start / stop microphone">🎙</button>
+        <div class="mic-status">
+          <div class="mic-status-line" id="mic-label"><strong>Idle</strong> — click mic to start</div>
+          <div class="vad-detail" id="vad-detail">
+            <span class="vad-prop">VAD: <span id="d-vad">—</span></span>
+            <span class="vad-prop">NS: <span id="d-ns">—</span></span>
+            <span class="vad-prop">AEC: <span id="d-aec">—</span></span>
+            <span class="vad-prop">SS: <span id="d-ss">—</span></span>
+          </div>
+        </div>
       </div>
 
-      <!-- LOG DRAWER -->
-      <div id="logPanel">
-        <div class="log-handle"></div>
+      <!-- meters -->
+      <div class="meters-grid">
+        <div class="meter-card">
+          <div class="meter-title">Input Level (dBFS)</div>
+          <div class="meter-value" id="m-dbfs">–∞</div>
+          <div class="bar-track"><div class="bar-fill" id="b-dbfs" style="width:0%"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-title">VAD Probability</div>
+          <div class="meter-value" id="m-vad">0.00</div>
+          <div class="bar-track"><div class="bar-fill" id="b-vad" style="width:0%"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-title">Noise Est. (dB)</div>
+          <div class="meter-value" id="m-noise">—</div>
+          <div class="bar-track"><div class="bar-fill" id="b-noise" style="width:0%;background:var(--warn)"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-title">SNR (dB)</div>
+          <div class="meter-value" id="m-snr">—</div>
+          <div class="bar-track"><div class="bar-fill" id="b-snr" style="width:0%;background:var(--accent2)"></div></div>
+        </div>
+      </div>
+
+      <!-- waveform -->
+      <div class="waveform-card">
+        <div class="waveform-header">
+          <span class="waveform-title">Waveform · post-pipeline</span>
+          <span class="speech-pill" id="speech-pill">IDLE</span>
+        </div>
+        <canvas id="waveform" height="80"></canvas>
+      </div>
+
+      <!-- transcript -->
+      <div class="log-card" id="transcript-card">
         <div class="log-header">
-          <div class="log-title">
-            <span class="log-title-dot"></span>
-            SYSTEM LOG
-          </div>
-          <div class="log-actions">
-            <button class="log-action-btn" id="logCopyBtn">COPY</button>
-            <button class="log-action-btn" id="logClearBtn">CLEAR</button>
-            <button class="log-close-btn" id="logCloseBtn">×</button>
-          </div>
+          <span class="log-title">Deepgram Transcript</span>
+          <span class="speech-pill" id="stt-pill">DISCONNECTED</span>
         </div>
-        <div class="log-filters">
-          <button class="filter-tab active" data-filter="all">ALL</button>
-          <button class="filter-tab" data-filter="cam">CAM</button>
-          <button class="filter-tab" data-filter="capture">CAPTURE</button>
-          <button class="filter-tab" data-filter="success">OK</button>
-          <button class="filter-tab" data-filter="warn">WARN</button>
-          <button class="filter-tab" data-filter="error">ERR</button>
+        <div id="transcript" style="font-family:var(--font-ui);font-size:13px;line-height:1.55;color:var(--text);min-height:60px;max-height:200px;overflow-y:auto;padding:4px 0">
+          <span style="color:var(--muted);font-style:italic">— enable Deepgram STT in the sidebar and start the mic —</span>
         </div>
-        <div id="logScroll"></div>
+        <div id="interim" style="font-family:var(--font-ui);font-size:13px;line-height:1.55;color:var(--muted);font-style:italic;min-height:20px;margin-top:4px"></div>
       </div>
+
+      <!-- log -->
+      <div class="log-card">
+        <div class="log-header">
+          <span class="log-title">Pipeline Event Log</span>
+          <button class="clear-btn" id="clear-btn">Clear</button>
+        </div>
+        <div id="log"></div>
+      </div>
+
     </div>
-
-    <!-- CONTROLS -->
-    <div id="controls">
-      <div id="slidersStrip">
-        <div class="slider-row">
-          <span class="slider-label">Opacity</span>
-          <input type="range" id="opacitySlider" min="5" max="95" value="45">
-          <span class="slider-val" id="opacityVal">45%</span>
-        </div>
-        <div class="slider-row">
-          <span class="slider-label">Scale</span>
-          <input type="range" id="scaleSlider" min="20" max="200" value="100">
-          <span class="slider-val" id="scaleVal">100%</span>
-        </div>
-      </div>
-
-      <div class="color-row">
-        <span class="slider-label">Color</span>
-        <div class="color-dots">
-          <div class="color-dot selected" style="background:#d4ff3e" data-color="#d4ff3e"></div>
-          <div class="color-dot" style="background:#3ec8ff" data-color="#3ec8ff"></div>
-          <div class="color-dot" style="background:#ff3ea0" data-color="#ff3ea0"></div>
-          <div class="color-dot" style="background:#ffffff" data-color="#ffffff"></div>
-          <div class="color-dot" style="background:#ff7b3e" data-color="#ff7b3e"></div>
-          <div class="color-dot" style="background:#3eff8a" data-color="#3eff8a"></div>
-        </div>
-      </div>
-
-      <div id="actionBar">
-        <button class="act-btn" id="camBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.9L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-          </svg>
-          <span>Camera</span>
-        </button>
-
-        <button class="act-btn" id="uploadBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-          </svg>
-          <span>Ref Photo</span>
-        </button>
-
-        <button class="act-btn" id="flipBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <path d="M8 3H5a2 2 0 00-2 2v14a2 2 0 002 2h3M16 3h3a2 2 0 012 2v14a2 2 0 01-2 2h-3M12 3v18"/>
-          </svg>
-          <span>Flip</span>
-        </button>
-
-        <button class="act-btn" id="modeBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <circle cx="12" cy="12" r="9"/>
-            <path d="M12 7v5l3 3"/>
-          </svg>
-          <span>Mode</span>
-        </button>
-
-        <button class="act-btn" id="gridBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="3" y="3" width="18" height="18" rx="1"/>
-            <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
-          </svg>
-          <span>Grid</span>
-        </button>
-
-      </div>
-    </div>
-  </div>
+  </main>
 </div>
 
-<div id="toast"></div>
-<input type="file" id="fileInput" accept="image/*">
-<canvas id="processCanvas"></canvas>
-
 <script>
-// ── STATE ──
-const S = {
-  cameraOn:false, stream:null,
-  facing:'user',
-  refImage:null, flipped:false,
-  opacity:0.45, scale:1.0, color:'#d4ff3e',
-  gridOn:false,
-  mode:'ghost', modeIdx:0,
-  modes:['ghost','outline','mixed'],
-  modeLabels:['GHOST MODE','OUTLINE MODE','MIXED MODE'],
-  offsetX:0, offsetY:0,
-  dragging:false, dragStart:null,
-  pinching:false, pinchDist0:0, scale0:1,
-  animFrame:null,
-  logFilter:'all', logCount:0, logEntries:[],
+/* ───────────────────────────────────────────────
+   State
+─────────────────────────────────────────────── */
+const state = {
+  running: false,
+  vadEnabled: true,
+  nsEnabled: false,
+  ssEnabled: false,
+  aecEnabled: false,
+  vadModel: 'ten',
+  nsModel:  'rnnoise',
+  ssMode:   'embed',
+  aecMode:  'browser',
+  sttEnabled: false,
+  sttModel: 'nova-3',
+  sttKey: '',
+  sttInterim: true,
+  threshold:   0.70,
+  consecMs:    200,
+  smoothing:   0.75,   // EMA weight on previous probability (0 = no smoothing)
+  smoothedProb: 0,
+  speechEndMs: 0,      // ms of sub-threshold frames since last speech
+  nsStrength:  0.75,
+  ssThresh:    0.60,
+  aecDb:       24,
+  // runtime
+  speechProbability: 0,
+  isSpeech: false,
+  consecCount: 0,
+  noiseFloor: -60,
+  speechFrames: 0,
 };
 
-// ── ELEMENTS ──
-const video      = document.getElementById('cameraVideo');
-const canvas     = document.getElementById('overlayCanvas');
-const ctx        = canvas.getContext('2d');
-const procCanvas = document.getElementById('processCanvas');
-const procCtx    = procCanvas.getContext('2d');
-const viewport   = document.getElementById('viewport');
+/* ───────────────────────────────────────────────
+   Audio context & nodes
+─────────────────────────────────────────────── */
+let audioCtx, analyser, sourceNode, gainNode, stream, sttProcessor;
+const FFT = 2048;
+const DG_TARGET_RATE = 16000;
 
-const camBtn     = document.getElementById('camBtn');
-const uploadBtn  = document.getElementById('uploadBtn');
-const fileInput  = document.getElementById('fileInput');
-const captureBtn = document.getElementById('vpCaptureBtn');
-const flipBtn    = document.getElementById('flipBtn');
-const modeBtn    = document.getElementById('modeBtn');
-const gridBtn    = document.getElementById('gridBtn');
-const fsBtn      = document.getElementById('vpFsBtn');
-const opSlider   = document.getElementById('opacitySlider');
-const scSlider   = document.getElementById('scaleSlider');
-const opVal      = document.getElementById('opacityVal');
-const scVal      = document.getElementById('scaleVal');
-const emptyState = document.getElementById('emptyState');
-const noCamMsg   = document.getElementById('noCamMsg');
-const flashEl    = document.getElementById('flashOverlay');
-const gridEl     = document.getElementById('grid');
-const modeTag    = document.getElementById('modeTag');
-const toast      = document.getElementById('toast');
-const camPill    = document.getElementById('camPill');
-const refPill    = document.getElementById('refPill');
+/* ───────────────────────────────────────────────
+   Deepgram STT client
+─────────────────────────────────────────────── */
+const dg = {
+  ws: null,
+  open: false,
+  finals: [],     // committed transcript pieces
+  lastInterim: '',
+  keepalive: null,
+};
 
-const logPanel     = document.getElementById('logPanel');
-const logScroll    = document.getElementById('logScroll');
-const logToggleBtn = document.getElementById('logToggleBtn');
-const logCloseBtn  = document.getElementById('logCloseBtn');
-const logClearBtn  = document.getElementById('logClearBtn');
-const logCopyBtn   = document.getElementById('logCopyBtn');
-const logBadge     = document.getElementById('logBadge');
-
-// ── CANVAS RESIZE ──
-function resize() {
-  canvas.width  = viewport.clientWidth;
-  canvas.height = viewport.clientHeight;
-}
-resize();
-window.addEventListener('resize', () => { resize(); });
-
-// ── LOGGING ──
-const ICONS = { info:'›', success:'✓', warn:'⚠', error:'✗', cam:'◉', capture:'◎' };
-
-function log(msg, type='info') {
-  const now = new Date();
-  const ts  = now.toTimeString().slice(0,8);
-  const entry = { ts, msg, type, id: ++S.logCount };
-  S.logEntries.push(entry);
-
-  logBadge.textContent = S.logCount;
-  if (!logPanel.classList.contains('open')) logBadge.classList.add('show');
-
-  if (S.logFilter === 'all' || S.logFilter === type) renderEntry(entry);
+function dgSetPill(text, active) {
+  const pill = document.getElementById('stt-pill');
+  pill.textContent = text;
+  if (active) pill.classList.add('active');
+  else pill.classList.remove('active');
 }
 
-function renderEntry(e) {
-  const div = document.createElement('div');
-  div.className = `log-entry ${e.type}`;
-  div.innerHTML =
-    `<span class="log-ts">${e.ts}</span>` +
-    `<span class="log-icon">${ICONS[e.type]||'·'}</span>` +
-    `<span class="log-msg">${e.msg}</span>`;
-  logScroll.appendChild(div);
-  logScroll.scrollTop = logScroll.scrollHeight;
-}
+function dgConnect() {
+  if (!state.sttEnabled) return;
+  if (!state.sttKey) {
+    logEvent('Deepgram: missing API key', 'error');
+    return;
+  }
+  if (dg.ws && (dg.ws.readyState === 0 || dg.ws.readyState === 1)) return;
 
-function applyFilter(f) {
-  S.logFilter = f;
-  logScroll.innerHTML = '';
-  S.logEntries.forEach(e => { if (f==='all'||f===e.type) renderEntry(e); });
-  logScroll.scrollTop = logScroll.scrollHeight;
-}
-
-document.querySelectorAll('.filter-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    applyFilter(tab.dataset.filter);
+  const params = new URLSearchParams({
+    model: state.sttModel,
+    encoding: 'linear16',
+    sample_rate: String(DG_TARGET_RATE),
+    channels: '1',
+    interim_results: state.sttInterim ? 'true' : 'false',
+    smart_format: 'true',
+    punctuate: 'true',
   });
-});
+  const url = `wss://api.deepgram.com/v1/listen?${params}`;
 
-// Log panel toggle
-logToggleBtn.addEventListener('click', () => {
-  const open = logPanel.classList.toggle('open');
-  logToggleBtn.classList.toggle('active', open);
-  if (open) { logBadge.classList.remove('show'); logScroll.scrollTop = logScroll.scrollHeight; }
-});
-logCloseBtn.addEventListener('click', () => {
-  logPanel.classList.remove('open');
-  logToggleBtn.classList.remove('active');
-});
-logClearBtn.addEventListener('click', () => {
-  S.logEntries = []; S.logCount = 0;
-  logScroll.innerHTML = '';
-  logBadge.classList.remove('show');
-  log('Log cleared', 'info');
-});
-logCopyBtn.addEventListener('click', () => {
-  const txt = S.logEntries.map(e=>`[${e.ts}][${e.type.toUpperCase()}] ${e.msg}`).join('\n');
-  navigator.clipboard?.writeText(txt).then(() => showToast('LOG COPIED'));
-});
-
-// Swipe down to close log panel
-let logSwipeStartY = 0;
-logPanel.addEventListener('touchstart', e => { logSwipeStartY = e.touches[0].clientY; }, { passive:true });
-logPanel.addEventListener('touchend', e => {
-  const dy = e.changedTouches[0].clientY - logSwipeStartY;
-  if (dy > 60) { logPanel.classList.remove('open'); logToggleBtn.classList.remove('active'); }
-}, { passive:true });
-
-// ── TOAST ──
-let toastTimer;
-function showToast(msg) {
-  toast.textContent = msg;
-  toast.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
-}
-
-// ── CAMERA ──
-async function startCamera() {
-  log('Requesting camera…', 'cam');
   try {
-    try {
-      S.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode:{ exact:S.facing }, width:{ideal:1920}, height:{ideal:1080} },
-        audio: false
-      });
-    } catch (innerErr) {
-      log(`${S.facing} cam (exact) unavailable, falling back…`, 'warn');
-      S.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode:S.facing, width:{ideal:1920}, height:{ideal:1080} },
-        audio: false
-      });
-    }
-    // Mirror only the front camera (selfie convention)
-    video.style.transform = S.facing === 'user' ? 'scaleX(-1)' : 'none';
-    video.srcObject = S.stream;
-    S.cameraOn = true;
-    camBtn.classList.add('active');
-    camPill.textContent = 'LIVE'; camPill.classList.add('live');
-    emptyState.classList.add('hidden');
-    captureBtn.disabled = false;
-    startRenderLoop();
-    const label = S.stream.getVideoTracks()[0]?.label || 'unknown';
-    log(`Camera ON — ${label}`, 'success');
-    const settings = S.stream.getVideoTracks()[0]?.getSettings?.() || {};
-    log(`Resolution: ${settings.width||'?'}×${settings.height||'?'}`, 'cam');
-    showToast('CAMERA ACTIVE');
-  } catch(e) {
-    noCamMsg.classList.add('show');
-    log(`Camera error: ${e.message}`, 'error');
-    showToast('ACCESS DENIED');
-  }
-}
-
-function stopCamera() {
-  if (S.stream) S.stream.getTracks().forEach(t => t.stop());
-  S.stream = null; video.srcObject = null; S.cameraOn = false;
-  camBtn.classList.remove('active');
-  camPill.textContent = 'CAM OFF'; camPill.classList.remove('live');
-  emptyState.classList.remove('hidden');
-  captureBtn.disabled = true;
-  cancelAnimationFrame(S.animFrame);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  log('Camera stopped', 'cam');
-  showToast('CAMERA OFF');
-}
-
-camBtn.addEventListener('click', () => {
-  if (S.cameraOn) stopCamera(); else startCamera();
-});
-
-// ── FILE UPLOAD ──
-uploadBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  log(`Loading: ${file.name} (${(file.size/1024).toFixed(1)} KB)`, 'info');
-  const url = URL.createObjectURL(file);
-  const img = new Image();
-  img.onload = () => {
-    S.refImage = img; S.offsetX = 0; S.offsetY = 0;
-    refPill.textContent = 'REF ON'; refPill.classList.add('live');
-    log(`Ref loaded: ${img.naturalWidth}×${img.naturalHeight}px`, 'success');
-    computeEdgeMap(img);
-    showToast('REFERENCE LOADED');
-  };
-  img.src = url;
-  fileInput.value = '';
-});
-
-// ── SOBEL EDGE MAP ──
-let edgeData = null;
-
-function computeEdgeMap(img) {
-  log('Running Sobel edge detection…', 'info');
-  const t0 = performance.now();
-  const W = img.naturalWidth, H = img.naturalHeight;
-  procCanvas.width = W; procCanvas.height = H;
-  procCtx.drawImage(img, 0, 0, W, H);
-  const src = procCtx.getImageData(0, 0, W, H).data;
-  const gray = new Float32Array(W*H);
-  for (let i=0;i<W*H;i++)
-    gray[i] = 0.299*src[i*4] + 0.587*src[i*4+1] + 0.114*src[i*4+2];
-
-  const edges = new Uint8ClampedArray(W*H*4);
-  let count = 0;
-  for (let y=1;y<H-1;y++) {
-    for (let x=1;x<W-1;x++) {
-      const i=y*W+x;
-      const gx = -gray[(y-1)*W+(x-1)]+gray[(y-1)*W+(x+1)]
-                 -2*gray[y*W+(x-1)]+2*gray[y*W+(x+1)]
-                 -gray[(y+1)*W+(x-1)]+gray[(y+1)*W+(x+1)];
-      const gy = -gray[(y-1)*W+(x-1)]-2*gray[(y-1)*W+x]-gray[(y-1)*W+(x+1)]
-                 +gray[(y+1)*W+(x-1)]+2*gray[(y+1)*W+x]+gray[(y+1)*W+(x+1)];
-      const mag = Math.min(255, Math.sqrt(gx*gx+gy*gy));
-      const idx = i*4;
-      edges[idx]=edges[idx+1]=edges[idx+2]=mag;
-      edges[idx+3] = mag>28 ? 255 : 0;
-      if (mag>28) count++;
-    }
-  }
-  edgeData = new ImageData(edges, W, H);
-  procCtx.putImageData(edgeData, 0, 0);
-  const ms = (performance.now()-t0).toFixed(1);
-  log(`Edge map: ${count.toLocaleString()} edge pixels in ${ms}ms`, 'success');
-}
-
-// ── RENDER LOOP ──
-function startRenderLoop() {
-  (function frame() {
-    drawOverlay();
-    S.animFrame = requestAnimationFrame(frame);
-  })();
-}
-
-function drawOverlay() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!S.refImage) return;
-  const cw=canvas.width, ch=canvas.height;
-  const img=S.refImage;
-  const baseH = ch*0.88;
-  const baseW = baseH*(img.naturalWidth/img.naturalHeight);
-  const dW=baseW*S.scale, dH=baseH*S.scale;
-  const dX=(cw-dW)/2+S.offsetX, dY=(ch-dH)/2+S.offsetY;
-  const r=parseInt(S.color.slice(1,3),16);
-  const g=parseInt(S.color.slice(3,5),16);
-  const b=parseInt(S.color.slice(5,7),16);
-
-  ctx.save();
-  if (S.flipped) { ctx.translate(cw,0); ctx.scale(-1,1); }
-
-  if (S.mode==='ghost') {
-    ctx.globalAlpha=S.opacity;
-    ctx.drawImage(img,dX,dY,dW,dH);
-  } else if (S.mode==='outline') {
-    if (edgeData) colorEdges(r,g,b,S.opacity,dX,dY,dW,dH);
-  } else {
-    ctx.globalAlpha=S.opacity*0.3;
-    ctx.drawImage(img,dX,dY,dW,dH);
-    if (edgeData) colorEdges(r,g,b,Math.min(1,S.opacity*1.7),dX,dY,dW,dH);
-  }
-  ctx.restore();
-}
-
-function colorEdges(r,g,b,alpha,dX,dY,dW,dH) {
-  procCtx.putImageData(edgeData,0,0);
-  const pix=procCtx.getImageData(0,0,edgeData.width,edgeData.height);
-  const d=pix.data;
-  for (let i=0;i<d.length;i+=4) {
-    if (d[i+3]>0) { d[i]=r;d[i+1]=g;d[i+2]=b;d[i+3]=Math.round(d[i+3]*alpha); }
-  }
-  procCtx.putImageData(pix,0,0);
-  ctx.globalAlpha=1;
-  ctx.drawImage(procCanvas,dX,dY,dW,dH);
-}
-
-// ── DRAG (mouse) ──
-canvas.addEventListener('mousedown', e => {
-  if (!S.refImage) return;
-  S.dragging=true;
-  S.dragStart={ x:e.clientX-S.offsetX, y:e.clientY-S.offsetY };
-  canvas.style.cursor='grabbing';
-});
-window.addEventListener('mousemove', e => {
-  if (!S.dragging) return;
-  S.offsetX=e.clientX-S.dragStart.x; S.offsetY=e.clientY-S.dragStart.y;
-});
-window.addEventListener('mouseup', () => {
-  if (S.dragging) { S.dragging=false; canvas.style.cursor='crosshair'; }
-});
-
-// ── TOUCH: drag + pinch ──
-function ptDist(t) {
-  const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY;
-  return Math.sqrt(dx*dx+dy*dy);
-}
-
-canvas.addEventListener('touchstart', e => {
-  if (!S.refImage) return;
-  if (e.touches.length===1) {
-    S.dragging=true; S.pinching=false;
-    const t=e.touches[0];
-    S.dragStart={ x:t.clientX-S.offsetX, y:t.clientY-S.offsetY };
-  } else if (e.touches.length===2) {
-    S.dragging=false; S.pinching=true;
-    S.pinchDist0=ptDist(e.touches); S.scale0=S.scale;
-    log('Pinch zoom started', 'info');
-  }
-},{ passive:true });
-
-canvas.addEventListener('touchmove', e => {
-  if (e.touches.length===1 && S.dragging) {
-    const t=e.touches[0];
-    S.offsetX=t.clientX-S.dragStart.x; S.offsetY=t.clientY-S.dragStart.y;
-  } else if (e.touches.length===2 && S.pinching) {
-    const ratio=ptDist(e.touches)/S.pinchDist0;
-    S.scale=Math.min(2.5,Math.max(0.15,S.scale0*ratio));
-    scSlider.value=Math.round(S.scale*100);
-    scVal.textContent=Math.round(S.scale*100)+'%';
-  }
-},{ passive:true });
-
-canvas.addEventListener('touchend', e => {
-  S.dragging=false;
-  if (S.pinching && e.touches.length<2) {
-    S.pinching=false;
-    log(`Pinch end — scale: ${Math.round(S.scale*100)}%`,'info');
-  }
-},{ passive:true });
-
-// ── SLIDERS ──
-opSlider.addEventListener('input', () => {
-  S.opacity=opSlider.value/100;
-  opVal.textContent=opSlider.value+'%';
-  log(`Opacity → ${opSlider.value}%`,'info');
-});
-scSlider.addEventListener('input', () => {
-  S.scale=scSlider.value/100;
-  scVal.textContent=scSlider.value+'%';
-  log(`Scale → ${scSlider.value}%`,'info');
-});
-
-// ── FLIP (switch front ↔ back camera) ──
-flipBtn.addEventListener('click', async () => {
-  S.facing = S.facing === 'user' ? 'environment' : 'user';
-  flipBtn.classList.toggle('active', S.facing === 'environment');
-  log(`Switching to ${S.facing === 'user' ? 'FRONT' : 'BACK'} camera`, 'cam');
-  showToast(S.facing === 'user' ? 'FRONT CAM' : 'BACK CAM');
-  if (S.cameraOn) {
-    if (S.stream) S.stream.getTracks().forEach(t => t.stop());
-    S.stream = null;
-    await startCamera();
-  }
-});
-
-// ── IMMERSIVE FULLSCREEN CAMERA MODE ──
-const appEl = document.getElementById('app');
-function isBrowserFs() {
-  return !!(document.fullscreenElement || document.webkitFullscreenElement);
-}
-
-async function enterImmersive() {
-  appEl.classList.add('immersive');
-  fsBtn.classList.add('active');
-  const el = document.documentElement;
-  try {
-    if (el.requestFullscreen) await el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+    dg.ws = new WebSocket(url, ['token', state.sttKey]);
   } catch (e) {
-    log(`Fullscreen API unavailable, using CSS-only immersive: ${e.message}`, 'warn');
+    logEvent('Deepgram: WS construct failed — ' + e.message, 'error');
+    return;
   }
-  setTimeout(resize, 80);
-  log('Entered fullscreen camera', 'info');
-  showToast('FULLSCREEN');
+  dg.ws.binaryType = 'arraybuffer';
+
+  dg.ws.onopen = () => {
+    dg.open = true;
+    dgSetPill('CONNECTED', true);
+    logEvent('Deepgram: WebSocket open', 'system');
+    dg.keepalive = setInterval(() => {
+      if (dg.ws && dg.ws.readyState === 1) {
+        dg.ws.send(JSON.stringify({ type: 'KeepAlive' }));
+      }
+    }, 8000);
+  };
+
+  dg.ws.onmessage = (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    if (msg.type === 'Results' || msg.channel) {
+      const alt = msg.channel?.alternatives?.[0];
+      if (!alt) return;
+      const text = alt.transcript || '';
+      if (!text) return;
+      if (msg.is_final) {
+        dg.finals.push(text);
+        dg.lastInterim = '';
+        renderTranscript();
+        logEvent('STT: ' + text, 'speech');
+      } else {
+        dg.lastInterim = text;
+        renderTranscript();
+      }
+    } else if (msg.type === 'Metadata') {
+      logEvent('Deepgram: connected (' + (msg.model_info?.name || state.sttModel) + ')', 'system');
+    }
+  };
+
+  dg.ws.onerror = () => {
+    logEvent('Deepgram: WebSocket error', 'error');
+  };
+
+  dg.ws.onclose = (ev) => {
+    dg.open = false;
+    if (dg.keepalive) { clearInterval(dg.keepalive); dg.keepalive = null; }
+    dgSetPill('DISCONNECTED', false);
+    if (ev.code !== 1000) {
+      logEvent('Deepgram: closed (' + ev.code + ' ' + (ev.reason || '') + ')', 'error');
+    } else {
+      logEvent('Deepgram: closed', 'system');
+    }
+  };
 }
 
-async function exitImmersive() {
-  appEl.classList.remove('immersive');
-  fsBtn.classList.remove('active');
-  if (isBrowserFs()) {
+function dgDisconnect() {
+  if (dg.ws && dg.ws.readyState <= 1) {
+    try { dg.ws.send(JSON.stringify({ type: 'CloseStream' })); } catch {}
+    try { dg.ws.close(1000, 'client done'); } catch {}
+  }
+  dg.ws = null;
+  dg.open = false;
+  if (dg.keepalive) { clearInterval(dg.keepalive); dg.keepalive = null; }
+  dgSetPill('DISCONNECTED', false);
+}
+
+function renderTranscript() {
+  const finalEl = document.getElementById('transcript');
+  const interimEl = document.getElementById('interim');
+  if (dg.finals.length === 0 && !dg.lastInterim) {
+    finalEl.innerHTML = '<span style="color:var(--muted);font-style:italic">— waiting for speech —</span>';
+  } else {
+    finalEl.textContent = dg.finals.join(' ');
+    finalEl.scrollTop = finalEl.scrollHeight;
+  }
+  interimEl.textContent = dg.lastInterim;
+}
+
+function floatTo16BitPCM(float32, srcRate) {
+  // Downsample to 16 kHz (linear interpolation) then convert to int16 little-endian
+  const ratio = srcRate / DG_TARGET_RATE;
+  const outLen = Math.floor(float32.length / ratio);
+  const out = new Int16Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const srcIdx = i * ratio;
+    const i0 = Math.floor(srcIdx);
+    const i1 = Math.min(i0 + 1, float32.length - 1);
+    const frac = srcIdx - i0;
+    const s = float32[i0] * (1 - frac) + float32[i1] * frac;
+    const clamped = Math.max(-1, Math.min(1, s));
+    out[i] = clamped < 0 ? clamped * 0x8000 : clamped * 0x7FFF;
+  }
+  return out.buffer;
+}
+
+function attachSttProcessor() {
+  if (!state.sttEnabled || !audioCtx || !sourceNode) return;
+  const bufSize = 4096;
+  sttProcessor = audioCtx.createScriptProcessor(bufSize, 1, 1);
+  let sentChunks = 0;
+  let sentBytes = 0;
+  sttProcessor.onaudioprocess = (e) => {
+    if (!dg.ws || dg.ws.readyState !== 1) return;
+    const input = e.inputBuffer.getChannelData(0);
+    const pcm = floatTo16BitPCM(input, audioCtx.sampleRate);
     try {
-      if (document.exitFullscreen) await document.exitFullscreen();
-      else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+      dg.ws.send(pcm);
+      sentChunks++;
+      sentBytes += pcm.byteLength;
+      if (sentChunks === 1) logEvent(`Deepgram: streaming PCM (16 kHz)`, 'system');
+      if (sentChunks % 50 === 0) logEvent(`Deepgram: ${sentChunks} chunks (${(sentBytes/1024).toFixed(1)} KB)`, 'system');
     } catch {}
-  }
-  setTimeout(resize, 80);
-  log('Exited fullscreen camera', 'info');
+  };
+  sourceNode.connect(sttProcessor);
+  // ScriptProcessor needs to be connected to a destination to fire, but we
+  // don't want playback — route through a muted gain.
+  const mute = audioCtx.createGain();
+  mute.gain.value = 0;
+  sttProcessor.connect(mute);
+  mute.connect(audioCtx.destination);
 }
 
-fsBtn.addEventListener('click', () => {
-  appEl.classList.contains('immersive') ? exitImmersive() : enterImmersive();
-});
-
-// ── FULLSCREEN ICON SWAP ──
-const vpFsIcon = document.getElementById('vpFsIcon');
-const FS_EXPAND_PATH   = 'M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4';
-const FS_MINIMIZE_PATH = 'M9 4v4a1 1 0 01-1 1H4M15 4v4a1 1 0 001 1h4M9 20v-4a1 1 0 00-1-1H4M15 20v-4a1 1 0 011-1h4';
-function syncVpFsIcon() {
-  const on = appEl.classList.contains('immersive');
-  vpFsIcon.querySelector('path').setAttribute('d', on ? FS_MINIMIZE_PATH : FS_EXPAND_PATH);
-}
-new MutationObserver(syncVpFsIcon).observe(appEl, { attributes:true, attributeFilter:['class'] });
-syncVpFsIcon();
-
-// Keep state in sync if user exits via Esc / system gesture
-const onFsChange = () => {
-  if (!isBrowserFs() && appEl.classList.contains('immersive')) {
-    appEl.classList.remove('immersive');
-    fsBtn.classList.remove('active');
+function detachSttProcessor() {
+  if (sttProcessor) {
+    try { sttProcessor.disconnect(); } catch {}
+    sttProcessor.onaudioprocess = null;
+    sttProcessor = null;
   }
-  resize();
+}
+
+
+const timeData = new Float32Array(FFT);
+const freqData = new Uint8Array(FFT / 2);
+
+/* ───────────────────────────────────────────────
+   VAD descriptions
+─────────────────────────────────────────────── */
+const VAD_DESC = {
+  ten:     'TEN VAD (ten-framework) — agent-first neural VAD. ONNX/WASM, ~330 KB, 16 kHz, 256-sample hop. Outperforms Silero/WebRTC on conversational corpora with lower CPU. Fast enough to gate LLM turn-taking.',
+  silero:  'Silero VAD — LSTM trained on 6k+ languages. ONNX ~1.8 MB, runs WASM in browser. ~8 ms latency, excellent accuracy across noise conditions.',
+  webrtc:  'WebRTC VAD — energy-based GMM shipped with Chromium. ~150 KB, <2 ms latency. Best in quiet environments; misfires on tonal noise (music, fans).',
+  cobra:   'Picovoice Cobra — proprietary on-device ML VAD, ~2 MB. Designed for always-on wake-word pipelines. Requires a license key in production.',
+  tiny:    'Tiny noise-robust VAD — spectral-gating heuristic + short-time energy. No model file (<50 KB of code), zero deps. OK for keyword spotting with prior noise profiling.',
 };
-document.addEventListener('fullscreenchange', onFsChange);
-document.addEventListener('webkitfullscreenchange', onFsChange);
 
-// ── GRID ──
-gridBtn.addEventListener('click', () => {
-  S.gridOn=!S.gridOn;
-  gridEl.classList.toggle('on',S.gridOn);
-  gridBtn.classList.toggle('active',S.gridOn);
-  log(`Grid: ${S.gridOn?'ON':'OFF'}`,'info');
-  showToast(S.gridOn?'GRID ON':'GRID OFF');
-});
+/* ───────────────────────────────────────────────
+   Pipeline node config
+─────────────────────────────────────────────── */
+const PIPE_NODES = [
+  { id: 'mic',  icon: '🎙', label: 'MIC',   always: true },
+  { id: 'aec',  icon: '🔇', label: 'AEC',   key: 'aecEnabled' },
+  { id: 'ns',   icon: '🧹', label: 'NS',    key: 'nsEnabled' },
+  { id: 'ss',   icon: '👤', label: 'SPKR',  key: 'ssEnabled' },
+  { id: 'vad',  icon: '🔍', label: 'VAD',   key: 'vadEnabled' },
+  { id: 'stt',  icon: '📝', label: 'STT',   always: true },
+];
 
-// ── MODE ──
-modeBtn.addEventListener('click', () => {
-  S.modeIdx=(S.modeIdx+1)%S.modes.length;
-  S.mode=S.modes[S.modeIdx];
-  modeTag.textContent=S.modeLabels[S.modeIdx];
-  modeTag.classList.add('show');
-  setTimeout(()=>modeTag.classList.remove('show'),1800);
-  log(`Mode → ${S.modeLabels[S.modeIdx]}`,'info');
-  showToast(S.modeLabels[S.modeIdx]);
-});
-
-// ── COLOR ──
-document.querySelectorAll('.color-dot').forEach(dot => {
-  dot.addEventListener('click', () => {
-    document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('selected'));
-    dot.classList.add('selected');
-    S.color=dot.dataset.color;
-    log(`Color → ${dot.dataset.color}`,'info');
+function buildPipeline() {
+  const bar = document.getElementById('pipeline-bar');
+  bar.innerHTML = '';
+  PIPE_NODES.forEach((n, i) => {
+    const active = n.always || state[n.key];
+    const arrow = i < PIPE_NODES.length - 1
+      ? `<div class="pipe-arrow">›</div>` : '';
+    bar.innerHTML += `
+      <div class="pipe-node">
+        <div class="pipe-icon ${active ? 'active' : 'inactive'}" id="pnode-${n.id}">
+          ${n.icon}
+        </div>
+        <div class="pipe-label">${n.label}</div>
+      </div>
+      ${arrow}
+    `;
   });
+}
+
+/* ───────────────────────────────────────────────
+   Simulate VAD probability from audio energy
+─────────────────────────────────────────────── */
+function computeSpeechProb(dbfs) {
+  // Simulate model-specific behaviour
+  let prob = 0;
+  const model = state.vadModel;
+  const noiseFloor = state.noiseFloor;
+  const snr = dbfs - noiseFloor;
+
+  if (model === 'ten') {
+    // TEN VAD — sharp, agent-tuned. Fast onset, robust to low-level noise.
+    prob = 1 / (1 + Math.exp(-(snr - 7) * 0.5));
+  } else if (model === 'webrtc') {
+    // Step-ish: energy threshold
+    prob = snr < 4 ? 0 : Math.min(1, (snr - 4) / 16);
+  } else if (model === 'silero') {
+    // Smoother sigmoid
+    prob = 1 / (1 + Math.exp(-(snr - 10) * 0.35));
+  } else if (model === 'cobra') {
+    // Sharper on-device style
+    prob = snr < 6 ? 0 : Math.min(1, (snr - 6) / 12);
+  } else {
+    // tiny: spectral gating — slightly noisier estimate
+    const jitter = (Math.random() - 0.5) * 0.1;
+    prob = Math.max(0, Math.min(1, 1 / (1 + Math.exp(-(snr - 12) * 0.3)) + jitter));
+  }
+
+  // Speaker separation: suppress low-similarity frames
+  if (state.ssEnabled) {
+    const simScore = 0.4 + Math.random() * 0.6; // simulated
+    if (simScore < state.ssThresh) prob *= 0.2;
+  }
+
+  return prob;
+}
+
+function updateNoiseFloor(dbfs) {
+  // Slow-track minimum
+  if (!state.isSpeech) {
+    state.noiseFloor = state.noiseFloor * 0.97 + dbfs * 0.03;
+    state.noiseFloor = Math.max(-80, Math.min(-20, state.noiseFloor));
+  }
+}
+
+/* ───────────────────────────────────────────────
+   Animation loop
+─────────────────────────────────────────────── */
+const canvas = document.getElementById('waveform');
+const ctx2d  = canvas.getContext('2d');
+
+function animLoop() {
+  if (!state.running) return;
+  requestAnimationFrame(animLoop);
+
+  analyser.getFloatTimeDomainData(timeData);
+  analyser.getByteFrequencyData(freqData);
+
+  // RMS → dBFS
+  let rms = 0;
+  for (let i = 0; i < FFT; i++) rms += timeData[i] * timeData[i];
+  rms = Math.sqrt(rms / FFT);
+  const dbfs = rms > 0 ? 20 * Math.log10(rms) : -100;
+
+  updateNoiseFloor(dbfs);
+  const snr = dbfs - state.noiseFloor;
+
+  // Apply NS gain reduction (simulated)
+  let processedDbfs = dbfs;
+  if (state.nsEnabled) {
+    const reduction = state.nsStrength * Math.max(0, -snr) * 0.5;
+    processedDbfs = dbfs + reduction * 0.4; // noise floor raised
+    // Suppress the gain node slightly
+    gainNode.gain.setTargetAtTime(
+      snr < 2 ? (1 - state.nsStrength * 0.6) : 1,
+      audioCtx.currentTime, 0.05
+    );
+  } else {
+    gainNode.gain.setTargetAtTime(1, audioCtx.currentTime, 0.05);
+  }
+
+  // VAD — raw probability
+  const rawProb = state.vadEnabled ? computeSpeechProb(dbfs) : 1.0;
+
+  // EMA smoothing: rejects short bursts (coughs, clicks, keyboard taps)
+  const a = state.smoothing;
+  state.smoothedProb = a * state.smoothedProb + (1 - a) * rawProb;
+  const prob = state.smoothedProb;
+  state.speechProbability = prob;
+
+  // Hysteresis: higher enter threshold, lower exit threshold (~-30%)
+  const FRAME_MS = (FFT / (audioCtx.sampleRate || 44100)) * 1000;
+  const enterT = state.threshold;
+  const exitT  = Math.max(0.05, state.threshold * 0.7);
+
+  const prevSpeech = state.isSpeech;
+  if (!state.isSpeech) {
+    // accumulating toward speech
+    if (prob >= enterT) state.speechFrames += FRAME_MS;
+    else                state.speechFrames = 0;
+    if (state.speechFrames >= state.consecMs) state.isSpeech = true;
+  } else {
+    // in speech, only exit after a hangover of sub-exitT frames
+    if (prob < exitT) state.speechEndMs += FRAME_MS;
+    else              state.speechEndMs = 0;
+    if (state.speechEndMs >= Math.max(150, state.consecMs)) {
+      state.isSpeech = false;
+      state.speechFrames = 0;
+      state.speechEndMs = 0;
+    }
+  }
+
+  // Log transitions
+  if (state.isSpeech !== prevSpeech) {
+    if (state.isSpeech) logEvent('● USER TURN — speaking', 'speech');
+    else                logEvent('◆ MODEL TURN — user paused', 'silence');
+  }
+
+  // Update metrics UI
+  const dbfsClamp = Math.max(-80, dbfs);
+  const dbfsPct   = ((dbfsClamp + 80) / 80) * 100;
+  setMeter('dbfs', dbfsClamp.toFixed(1) + ' dB', dbfsPct, dbfsPct > 80 ? 'danger' : dbfsPct > 60 ? 'warn' : '');
+  setMeter('vad',  prob.toFixed(2), prob * 100, prob >= state.threshold ? '' : '');
+  setMeter('noise', state.noiseFloor.toFixed(1) + ' dB', Math.abs((state.noiseFloor + 80) / 80) * 100, '');
+  const snrClamped = Math.max(0, Math.min(40, snr));
+  setMeter('snr', snrClamped.toFixed(1) + ' dB', (snrClamped / 40) * 100, '');
+
+  // VAD probability bar color
+  const bvad = document.getElementById('b-vad');
+  bvad.style.background = prob >= state.threshold ? 'var(--accent)' : 'var(--muted)';
+
+  // turn pill (user vs model) — based on VAD state
+  const pill = document.getElementById('speech-pill');
+  if (state.isSpeech) {
+    pill.textContent = '● USER TURN';
+    pill.classList.add('active');
+    pill.classList.remove('model');
+  } else {
+    pill.textContent = '◆ MODEL TURN';
+    pill.classList.remove('active');
+    pill.classList.add('model');
+  }
+
+  // draw waveform
+  drawWaveform();
+}
+
+function setMeter(id, val, pct, cls) {
+  const mv = document.getElementById('m-' + id);
+  const bv = document.getElementById('b-' + id);
+  if (!mv) return;
+  mv.textContent = val;
+  mv.className = 'meter-value' + (cls ? ' ' + cls : '');
+  bv.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  if (id !== 'vad') {
+    bv.className = 'bar-fill' + (cls ? ' ' + cls : '');
+  }
+}
+
+function drawWaveform() {
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  ctx2d.scale(devicePixelRatio, devicePixelRatio);
+
+  ctx2d.fillStyle = '#0d0f14';
+  ctx2d.fillRect(0, 0, W, H);
+
+  // grid line at centre
+  ctx2d.strokeStyle = '#1a1e2a';
+  ctx2d.lineWidth = 1;
+  ctx2d.beginPath();
+  ctx2d.moveTo(0, H / 2);
+  ctx2d.lineTo(W, H / 2);
+  ctx2d.stroke();
+
+  // waveform
+  ctx2d.beginPath();
+  ctx2d.strokeStyle = state.isSpeech ? '#00e5a0' : '#2d3348';
+  ctx2d.lineWidth = 1.5;
+
+  const step = Math.ceil(FFT / W);
+  for (let i = 0; i < W; i++) {
+    const v = timeData[i * step] || 0;
+    const y = (1 - (v + 1) / 2) * H;
+    i === 0 ? ctx2d.moveTo(i, y) : ctx2d.lineTo(i, y);
+  }
+  ctx2d.stroke();
+}
+
+/* ───────────────────────────────────────────────
+   Log
+─────────────────────────────────────────────── */
+function logEvent(msg, type = 'system') {
+  const log = document.getElementById('log');
+  const now = new Date();
+  const t   = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+             + '.' + String(now.getMilliseconds()).padStart(3, '0');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${t}</span><span class="log-msg ${type}">${msg}</span>`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+
+  // Keep at most 200 lines
+  while (log.children.length > 200) log.removeChild(log.firstChild);
+}
+
+/* ───────────────────────────────────────────────
+   Mic start / stop
+─────────────────────────────────────────────── */
+async function startMic() {
+  try {
+    const constraints = {
+      audio: {
+        echoCancellation: state.aecEnabled && state.aecMode === 'browser',
+        noiseSuppression: false, // we handle NS ourselves in sim
+        autoGainControl: false,
+        sampleRate: 48000,
+      }
+    };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (e) {
+    document.getElementById('perm-warn').style.display = 'block';
+    logEvent('Mic unavailable — using simulated audio', 'error');
+    startSimulated();
+    return;
+  }
+
+  audioCtx  = new AudioContext({ sampleRate: 48000 });
+  analyser  = audioCtx.createAnalyser();
+  gainNode  = audioCtx.createGain();
+  analyser.fftSize = FFT;
+  analyser.smoothingTimeConstant = 0.7;
+  sourceNode = audioCtx.createMediaStreamSource(stream);
+  sourceNode.connect(gainNode);
+  gainNode.connect(analyser);
+  // don't connect to destination (avoids feedback)
+
+  logEvent('Mic acquired · pipeline running', 'system');
+  state.running = true;
+  if (state.sttEnabled) { dgConnect(); attachSttProcessor(); }
+  requestAnimationFrame(animLoop);
+}
+
+function startSimulated() {
+  audioCtx  = new AudioContext({ sampleRate: 44100 });
+  analyser  = audioCtx.createAnalyser();
+  gainNode  = audioCtx.createGain();
+  analyser.fftSize = FFT;
+  analyser.smoothingTimeConstant = 0.5;
+
+  // Oscillator-based fake voice + noise
+  const osc = audioCtx.createOscillator();
+  osc.frequency.value = 200;
+  const oscGain = audioCtx.createGain();
+  oscGain.gain.value = 0;
+  osc.connect(oscGain);
+
+  const bufSrc = audioCtx.createScriptProcessor(FFT, 1, 1);
+  bufSrc.onaudioprocess = (e) => {
+    const out = e.outputBuffer.getChannelData(0);
+    for (let i = 0; i < out.length; i++) {
+      out[i] = (Math.random() * 2 - 1) * 0.04; // noise floor
+    }
+  };
+  bufSrc.connect(audioCtx.destination);
+
+  oscGain.connect(gainNode);
+  gainNode.connect(analyser);
+  gainNode.connect(audioCtx.destination);
+  osc.start();
+
+  // Simulate speech bursts
+  let simTimer;
+  function scheduleBurst() {
+    const delay = 1500 + Math.random() * 2000;
+    simTimer = setTimeout(() => {
+      const dur = 600 + Math.random() * 1200;
+      oscGain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
+      setTimeout(() => oscGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1), dur);
+      scheduleBurst();
+    }, delay);
+  }
+  scheduleBurst();
+
+  state.running = true;
+  requestAnimationFrame(animLoop);
+}
+
+async function toggleMic() {
+  if (state.running) {
+    state.running = false;
+    detachSttProcessor();
+    dgDisconnect();
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (audioCtx) audioCtx.close();
+    sourceNode = null;
+    document.getElementById('mic-btn').classList.remove('recording');
+    document.getElementById('mic-label').innerHTML = '<strong>Idle</strong> — click mic to start';
+    setMeter('dbfs', '–∞', 0, '');
+    setMeter('vad',  '0.00', 0, '');
+    setMeter('noise', '—', 0, '');
+    setMeter('snr',   '—', 0, '');
+    logEvent('Pipeline stopped', 'system');
+    const sp = document.getElementById('speech-pill');
+    sp.textContent = 'IDLE';
+    sp.classList.remove('active');
+    sp.classList.remove('model');
+  } else {
+    document.getElementById('mic-btn').classList.add('recording');
+    document.getElementById('mic-label').innerHTML = '<strong>Active</strong> · listening…';
+    await startMic();
+  }
+}
+
+/* ───────────────────────────────────────────────
+   Detail row
+─────────────────────────────────────────────── */
+function updateDetailRow() {
+  document.getElementById('d-vad').textContent = state.vadEnabled
+    ? ({ ten:'TEN', silero:'Silero', webrtc:'WebRTC', cobra:'Cobra', tiny:'Tiny' }[state.vadModel] || state.vadModel)
+    : 'OFF';
+  document.getElementById('d-ns').textContent  = state.nsEnabled  ? state.nsModel  : 'OFF';
+  document.getElementById('d-aec').textContent = state.aecEnabled ? state.aecMode  : 'OFF';
+  document.getElementById('d-ss').textContent  = state.ssEnabled  ? state.ssMode   : 'OFF';
+}
+
+/* ───────────────────────────────────────────────
+   UI wiring
+─────────────────────────────────────────────── */
+function wireToggle(id, stateKey, cardId, controlsId) {
+  const el = document.getElementById(id);
+  el.addEventListener('change', () => {
+    state[stateKey] = el.checked;
+    if (controlsId) {
+      document.getElementById(controlsId).style.opacity = el.checked ? '1' : '.35';
+      document.getElementById(controlsId).style.pointerEvents = el.checked ? '' : 'none';
+    }
+    buildPipeline();
+    updateDetailRow();
+    logEvent(`${stateKey.replace('Enabled','').toUpperCase()} ${el.checked ? 'enabled' : 'disabled'}`, 'system');
+  });
+}
+
+function wireSlider(id, stateKey, displayId, format) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value);
+    state[stateKey] = v;
+    document.getElementById(displayId).textContent = format(v);
+  });
+}
+
+function wireSelect(id, stateKey, onChangeFn) {
+  const el = document.getElementById(id);
+  el.addEventListener('change', () => {
+    state[stateKey] = el.value;
+    if (onChangeFn) onChangeFn(el.value);
+    updateDetailRow();
+  });
+}
+
+function updateVadDesc(model) {
+  document.getElementById('vad-desc').textContent = VAD_DESC[model] || '';
+}
+
+/* ───────────────────────────────────────────────
+   Boot
+─────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+
+  buildPipeline();
+
+  // Toggles
+  wireToggle('vad-enabled', 'vadEnabled', 'card-vad', null);
+  wireToggle('ns-enabled',  'nsEnabled',  'card-ns',  'ns-controls');
+  wireToggle('ss-enabled',  'ssEnabled',  'card-ss',  'ss-controls');
+  wireToggle('aec-enabled', 'aecEnabled', 'card-aec', 'aec-controls');
+  wireToggle('stt-enabled', 'sttEnabled', 'card-stt', 'stt-controls');
+
+  // STT controls
+  const sttKeyEl = document.getElementById('stt-key');
+  const sttKeyStatus = document.getElementById('stt-key-status');
+  const savedKey = (() => { try { return localStorage.getItem('dg_key') || ''; } catch { return ''; } })();
+  if (savedKey) { sttKeyEl.value = savedKey; state.sttKey = savedKey; sttKeyStatus.textContent = 'saved'; }
+  sttKeyEl.addEventListener('input', () => {
+    state.sttKey = sttKeyEl.value.trim();
+    try { localStorage.setItem('dg_key', state.sttKey); } catch {}
+    sttKeyStatus.textContent = state.sttKey ? 'saved' : 'not set';
+  });
+  document.getElementById('stt-model').addEventListener('change', (e) => {
+    state.sttModel = e.target.value;
+    if (state.sttEnabled && state.running) { dgDisconnect(); dgConnect(); }
+  });
+  document.getElementById('stt-interim').addEventListener('change', (e) => {
+    state.sttInterim = e.target.checked;
+    if (state.sttEnabled && state.running) { dgDisconnect(); dgConnect(); }
+  });
+
+  // Toggle reaction: connect/disconnect live
+  document.getElementById('stt-enabled').addEventListener('change', (e) => {
+    if (!state.running) return;
+    if (e.target.checked) { dgConnect(); attachSttProcessor(); }
+    else { detachSttProcessor(); dgDisconnect(); }
+  });
+
+  // Selects
+  wireSelect('vad-model', 'vadModel', updateVadDesc);
+  wireSelect('ns-model',  'nsModel');
+  wireSelect('ss-mode',   'ssMode');
+  wireSelect('aec-mode',  'aecMode');
+
+  // Sliders
+  wireSlider('thresh',    'threshold',  'thresh-val',   v => v.toFixed(2));
+  wireSlider('consec',    'consecMs',   'consec-val',   v => v + ' ms');
+  wireSlider('smooth',    'smoothing',  'smooth-val',   v => v.toFixed(2));
+  wireSlider('ns-strength','nsStrength','ns-str-val',   v => v.toFixed(2));
+  wireSlider('ss-thresh', 'ssThresh',   'ss-thresh-val',v => v.toFixed(2));
+  wireSlider('aec-db',    'aecDb',      'aec-db-val',   v => '−' + v + ' dB');
+
+  // Mic button
+  document.getElementById('mic-btn').addEventListener('click', toggleMic);
+
+  // Clear log
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    document.getElementById('log').innerHTML = '';
+  });
+
+  // Initial VAD desc
+  updateVadDesc('ten');
+
+  // Initial detail row
+  updateDetailRow();
+
+  // Disable NS / SS / AEC controls by default (toggles are off)
+  ['ns-controls','ss-controls','aec-controls','stt-controls'].forEach(id => {
+    document.getElementById(id).style.opacity = '.35';
+    document.getElementById(id).style.pointerEvents = 'none';
+  });
+
+  logEvent('Pipeline Playground ready — configure options then click 🎙', 'system');
 });
-
-// ── CAPTURE ──
-captureBtn.addEventListener('click', () => {
-  if (!S.cameraOn) return;
-  log('Capturing frame…','capture');
-  flashEl.classList.add('flash');
-  setTimeout(()=>flashEl.classList.remove('flash'),140);
-
-  // Capture at the camera's NATIVE resolution, not the viewport size.
-  const vw = video.videoWidth  || canvas.width;
-  const vh = video.videoHeight || canvas.height;
-  const tmp = document.createElement('canvas');
-  tmp.width = vw; tmp.height = vh;
-  const tCtx = tmp.getContext('2d');
-  tCtx.save();
-  if (S.facing === 'user') { tCtx.translate(vw,0); tCtx.scale(-1,1); }
-  tCtx.drawImage(video,0,0,vw,vh);
-  tCtx.restore();
-  // Overlay is intentionally NOT drawn into the saved image —
-  // the on-screen ref stays visible, but the downloaded photo is clean.
-
-  tmp.toBlob(blob=>{
-    const fname=`poseframe_${Date.now()}.jpg`;
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=fname; a.click();
-    log(`Saved: ${fname} — ${(blob.size/1024).toFixed(1)} KB`,'capture');
-    showToast('📸 PHOTO SAVED');
-  },'image/jpeg',0.95);
-});
-
-canvas.style.cursor='crosshair';
-
-// ── BOOT LOGS ──
-log('PoseFrame v2 ready','success');
-log('Mobile touch supported — drag & pinch-to-zoom','info');
-log('Tap "Camera" to start live feed','info');
-log('Tap "Ref Photo" to load pose reference','info');
-log('Swipe down on log panel to close','info');
 </script>
 </body>
 </html>
