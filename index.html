@@ -2,1609 +2,988 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voice Pipeline Playground</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Rizz Trainer — Texting Reps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:        #0d0f14;
-    --surface:   #141720;
-    --panel:     #1a1e2a;
-    --border:    #252a38;
-    --accent:    #00e5a0;
-    --accent2:   #5b8def;
-    --warn:      #f0a040;
-    --danger:    #e05555;
-    --text:      #d4daf0;
-    --muted:     #5a6280;
-    --tag-bg:    #1e2436;
+  :root{
+    --bg:#0a0a0d;
+    --bg-elev:#111116;
+    --surface:#191920;
+    --surface-2:#20202a;
+    --border:#2a2a35;
+    --text:#f3f3f6;
+    --text-muted:#8e8e9c;
+    --text-faint:#5c5c68;
+    --accent:#ff3b64;
+    --accent-soft:rgba(255,59,100,.14);
+    --gold:#ffcf4d;
+    --good:#4ade95;
+    --warn:#ff9f5a;
+    --bad:#ff4d4d;
+    --radius:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:
+      radial-gradient(1100px 600px at 85% -10%, rgba(255,59,100,.10), transparent 60%),
+      radial-gradient(800px 500px at -10% 110%, rgba(255,207,77,.06), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  ::selection{ background:var(--accent); color:#0a0a0d; }
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
 
-    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-    --font-ui:   'Inter', system-ui, sans-serif;
+  button{font-family:inherit; cursor:pointer;}
+  input,textarea{font-family:inherit;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001s !important; transition-duration:.001s !important;}
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ---------- HEADER / VITALS STRIP ---------- */
+  header{
+    border-bottom:1px solid var(--border);
+    background:rgba(10,10,13,.85);
+    backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+  }
+  .header-inner{
+    max-width:1180px; margin:0 auto;
+    padding:14px 20px;
+    display:flex; align-items:center; gap:18px;
+  }
+  .wordmark{
+    font-family:'Bricolage Grotesque',sans-serif;
+    font-weight:800;
+    font-size:20px;
+    letter-spacing:-0.02em;
+    white-space:nowrap;
+    display:flex; align-items:baseline; gap:2px;
+  }
+  .wordmark .r{ color:var(--accent); }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-ui);
-    font-size: 14px;
-    line-height: 1.5;
-    min-height: 100vh;
+  .vitals{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    min-width:0;
+  }
+  .pulse-wrap{
+    flex:1;
+    height:34px;
+    min-width:60px;
+    position:relative;
+    overflow:hidden;
+  }
+  .pulse-wrap svg{ width:100%; height:100%; display:block; }
+  .pulse-line{
+    fill:none;
+    stroke:var(--accent);
+    stroke-width:1.6;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    filter:drop-shadow(0 0 6px currentColor);
+    transition:stroke .5s ease;
+  }
+  .score-chip{
+    display:flex; align-items:baseline; gap:6px;
+    padding:6px 12px;
+    border:1px solid var(--border);
+    border-radius:99px;
+    background:var(--surface);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .score-chip .num{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:600;
+    font-size:15px;
+  }
+  .score-chip .lbl{ font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; }
+
+  .icon-btn{
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text-muted);
+    width:38px; height:38px;
+    border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    transition:.15s;
+  }
+  .icon-btn:hover{ color:var(--text); border-color:var(--text-faint); }
+  .icon-btn svg{ width:18px; height:18px; }
+
+  /* ---------- LAYOUT ---------- */
+  main{
+    flex:1;
+    max-width:1180px;
+    width:100%;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:1fr 360px;
+    gap:0;
+    min-height:0;
+  }
+  @media (max-width:900px){
+    main{ grid-template-columns:1fr; }
   }
 
-  /* ── top bar ── */
-  header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
+  .chat-col{
+    display:flex; flex-direction:column;
+    min-height:0;
+    border-right:1px solid var(--border);
+  }
+  @media (max-width:900px){ .chat-col{ border-right:none; } }
+
+  .scenario-bar{
+    padding:14px 20px;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:10px;
+  }
+  .scenario-bar select{
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 12px;
+    border-radius:10px;
+    font-size:13px;
+    flex:1;
+  }
+  .reset-btn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-muted);
+    font-size:12px;
+    padding:8px 12px;
+    border-radius:10px;
+    transition:.15s;
+  }
+  .reset-btn:hover{ color:var(--bad); border-color:var(--bad); }
+
+  .chat-scroll{
+    flex:1;
+    overflow-y:auto;
+    padding:22px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    min-height:280px;
+  }
+  .msg{
+    max-width:78%;
+    padding:11px 15px;
+    border-radius:18px;
+    font-size:14.5px;
+    line-height:1.5;
+    animation:pop .25s ease;
+  }
+  @keyframes pop{ from{opacity:0; transform:translateY(6px) scale(.98);} to{opacity:1; transform:none;} }
+  .msg.her{
+    align-self:flex-start;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-bottom-left-radius:5px;
+  }
+  .msg.user{
+    align-self:flex-end;
+    background:linear-gradient(135deg, var(--accent), #c4264a);
+    color:#fff;
+    border-bottom-right-radius:5px;
+  }
+  .msg-name{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--text-faint);
+    margin:2px 4px;
+  }
+  .msg.user + .msg-name, .name-row.user{ text-align:right; }
+
+  .typing{
+    align-self:flex-start;
+    display:flex; gap:4px;
+    padding:13px 16px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:18px;
+    border-bottom-left-radius:5px;
+  }
+  .typing span{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--text-faint);
+    animation:blink 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){ animation-delay:.2s; }
+  .typing span:nth-child(3){ animation-delay:.4s; }
+  @keyframes blink{ 0%,80%,100%{ opacity:.25; } 40%{ opacity:1; } }
+
+  .empty-state{
+    margin:auto;
+    text-align:center;
+    color:var(--text-faint);
+    max-width:280px;
+    font-size:13.5px;
+    line-height:1.6;
+  }
+  .empty-state strong{ color:var(--text-muted); display:block; margin-bottom:6px; font-size:14px;}
+
+  /* ---------- INPUT DOCK ---------- */
+  .dock{
+    border-top:1px solid var(--border);
+    padding:14px 20px 18px;
+    background:var(--bg-elev);
+  }
+  .input-row{
+    display:flex; gap:10px; align-items:flex-end;
+  }
+  .input-row textarea{
+    flex:1;
+    resize:none;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    color:var(--text);
+    padding:12px 14px;
+    font-size:14.5px;
+    line-height:1.4;
+    max-height:120px;
+    min-height:44px;
+    transition:border-color .15s;
+  }
+  .input-row textarea:focus{ outline:none; border-color:var(--accent); }
+  .send-btn{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:14px;
+    width:48px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    transition:.15s;
+  }
+  .send-btn:disabled{ background:var(--surface-2); color:var(--text-faint); cursor:not-allowed; }
+  .send-btn:not(:disabled):hover{ filter:brightness(1.1); }
+  .send-btn svg{ width:19px; height:19px; }
+  .hint{ font-size:11px; color:var(--text-faint); margin-top:8px; }
+
+  /* ---------- ANALYSIS PANEL ---------- */
+  .analysis-col{
+    display:flex; flex-direction:column;
+    background:var(--bg-elev);
+  }
+  .analysis-scroll{
+    flex:1; overflow-y:auto;
+    padding:20px;
+  }
+  @media (max-width:900px){
+    .analysis-col{
+      position:fixed;
+      inset:auto 0 0 0;
+      max-height:88vh;
+      z-index:50;
+      border-top:1px solid var(--border);
+      border-radius:20px 20px 0 0;
+      box-shadow:0 -20px 60px rgba(0,0,0,.55);
+      transform:translateY(102%);
+      transition:transform .28s cubic-bezier(.32,.72,0,1);
+    }
+    .analysis-col.open{ transform:translateY(0); }
   }
 
-  .logo {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--accent);
-    letter-spacing: .08em;
-    text-transform: uppercase;
+  .panel-idle{
+    margin:auto; text-align:center; color:var(--text-faint);
+    font-size:13px; padding:30px 20px; line-height:1.6;
+  }
+  .panel-idle svg{ width:30px; height:30px; margin-bottom:10px; opacity:.5;}
+
+  .analysis-card{ display:flex; flex-direction:column; gap:18px; }
+
+  .verdict-block{
+    display:flex; align-items:center; gap:16px;
+    padding:18px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:var(--surface);
+  }
+  .score-ring{
+    position:relative;
+    width:72px; height:72px; flex-shrink:0;
+  }
+  .score-ring svg{ transform:rotate(-90deg); width:72px; height:72px; }
+  .score-ring circle{ fill:none; stroke-width:6; }
+  .score-ring .bg{ stroke:var(--surface-2); }
+  .score-ring .fg{ stroke-linecap:round; transition:stroke-dashoffset .7s cubic-bezier(.32,.72,0,1), stroke .5s; }
+  .score-ring .val{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-weight:600; font-size:18px;
+  }
+  .verdict-text .tag{
+    font-family:'Bricolage Grotesque',sans-serif;
+    font-weight:800; font-size:19px; letter-spacing:-.01em;
+    margin-bottom:3px;
+  }
+  .verdict-text .sub{ font-size:12px; color:var(--text-muted); }
+
+  .fb-section h4{
+    font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--text-faint); margin-bottom:9px; display:flex; align-items:center; gap:6px;
+  }
+  .fb-list{ display:flex; flex-direction:column; gap:7px; }
+  .fb-item{
+    display:flex; gap:9px; align-items:flex-start;
+    font-size:13.5px; line-height:1.5; color:var(--text);
+  }
+  .fb-item .dot{
+    width:6px; height:6px; border-radius:50%; margin-top:6px; flex-shrink:0;
+  }
+  .fb-item.good .dot{ background:var(--good); }
+  .fb-item.bad .dot{ background:var(--bad); }
+
+  .factor-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  }
+  .factor-pill{
+    border:1px solid var(--border);
+    background:var(--surface);
+    border-radius:10px;
+    padding:8px 10px;
+    font-size:11.5px;
+    line-height:1.4;
+  }
+  .factor-pill b{
+    display:block; font-size:10px; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--text-faint); margin-bottom:3px;
   }
 
-  .logo span { color: var(--muted); }
+  .rewrite-box{
+    border:1px solid var(--accent);
+    background:var(--accent-soft);
+    border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  .rewrite-box h4{
+    font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--accent); margin-bottom:8px;
+  }
+  .rewrite-box p{ font-size:14px; line-height:1.55; }
 
-  header .badge {
-    margin-left: auto;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 2px 8px;
+  .panel-actions{ display:flex; flex-direction:column; gap:8px; }
+  .btn{
+    border-radius:12px; border:1px solid var(--border);
+    padding:11px 14px; font-size:13.5px; font-weight:600;
+    background:var(--surface); color:var(--text);
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:.15s;
+  }
+  .btn:hover{ border-color:var(--text-faint); }
+  .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.primary:hover{ filter:brightness(1.08); }
+  .btn.ghost{ background:transparent; color:var(--text-muted); border-color:transparent; }
+  .btn.ghost:hover{ color:var(--text); }
+
+  .mobile-toggle{
+    display:none;
+  }
+  @media (max-width:900px){
+    .mobile-toggle{
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      position:fixed; bottom:18px; right:18px; z-index:45;
+      background:var(--accent); color:#fff; border:none;
+      border-radius:99px; padding:12px 18px; font-size:13px; font-weight:700;
+      box-shadow:0 8px 24px rgba(255,59,100,.35);
+    }
+  }
+  .scrim{
+    display:none;
+  }
+  @media (max-width:900px){
+    .scrim.show{
+      display:block; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:49;
+    }
   }
 
-  /* ── layout ── */
-  .workspace {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    height: calc(100vh - 53px);
+  /* ---------- SETTINGS MODAL ---------- */
+  .modal-scrim{
+    position:fixed; inset:0; background:rgba(0,0,0,.6);
+    display:none; align-items:center; justify-content:center; z-index:100;
+    padding:20px;
   }
-
-  /* ── sidebar ── */
-  .sidebar {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    padding: 20px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  .modal-scrim.show{ display:flex; }
+  .modal{
+    background:var(--bg-elev);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:26px;
+    max-width:420px; width:100%;
   }
-
-  .section-label {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: .14em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 10px;
+  .modal h3{
+    font-family:'Bricolage Grotesque',sans-serif;
+    font-weight:800; font-size:19px; margin-bottom:6px;
   }
-
-  /* card */
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 14px 16px;
+  .modal p{ font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:16px; }
+  .modal label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); display:block; margin-bottom:6px; }
+  .modal input[type=password], .modal input[type=text]{
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); padding:11px 13px; border-radius:10px; font-size:13.5px;
+    margin-bottom:14px;
   }
+  .modal input:focus{ outline:none; border-color:var(--accent); }
+  .modal-actions{ display:flex; gap:10px; }
+  .modal-actions .btn{ flex:1; }
+  .key-link{ font-size:11.5px; color:var(--text-faint); }
+  .key-link a{ color:var(--accent); text-decoration:none; }
 
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
+  .banner{
+    margin:14px 20px 0;
+    padding:11px 14px;
+    border-radius:12px;
+    border:1px solid var(--warn);
+    background:rgba(255,159,90,.1);
+    font-size:12.5px;
+    color:var(--warn);
+    display:flex; align-items:center; gap:8px;
   }
-
-  .card-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-    letter-spacing: .02em;
-  }
-
-  .step-num {
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: #000;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-
-  /* toggle */
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-
-  .toggle-label { font-size: 12px; color: var(--text); }
-
-  .toggle {
-    position: relative;
-    width: 36px; height: 20px;
-    cursor: pointer;
-  }
-
-  .toggle input { opacity: 0; width: 0; height: 0; }
-
-  .toggle .track {
-    position: absolute; inset: 0;
-    background: var(--border);
-    border-radius: 10px;
-    transition: background .2s;
-  }
-
-  .toggle input:checked ~ .track { background: var(--accent); }
-
-  .toggle .thumb {
-    position: absolute;
-    top: 3px; left: 3px;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: #fff;
-    transition: left .2s;
-  }
-
-  .toggle input:checked ~ .thumb { left: 19px; }
-
-  /* select */
-  select {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: var(--font-ui);
-    font-size: 12px;
-    padding: 7px 10px;
-    appearance: none;
-    cursor: pointer;
-    outline: none;
-    transition: border-color .15s;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235a6280' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-  }
-
-  select:focus { border-color: var(--accent); }
-
-  /* slider */
-  .slider-row { margin-top: 12px; }
-
-  .slider-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 6px;
-  }
-
-  .slider-name { font-size: 11px; color: var(--muted); }
-
-  .slider-val {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--accent);
-  }
-
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--border);
-    outline: none;
-    cursor: pointer;
-  }
-
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: var(--accent);
-    border: 2px solid var(--bg);
-    transition: transform .1s;
-  }
-
-  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-
-  /* disabled overlay for cards */
-  .card.disabled { opacity: .45; pointer-events: none; }
-
-  /* sub-hint */
-  .hint {
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 6px;
-    line-height: 1.4;
-  }
-
-  /* tag chips */
-  .chip {
-    display: inline-block;
-    background: var(--tag-bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 2px 7px;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--muted);
-    margin-top: 6px;
-    margin-right: 4px;
-  }
-
-  /* ── main panel ── */
-  .main {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* pipeline viz */
-  .pipeline-bar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    gap: 0;
-    overflow-x: auto;
-    flex-shrink: 0;
-  }
-
-  .pipe-node {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    min-width: 80px;
-  }
-
-  .pipe-icon {
-    width: 40px; height: 40px;
-    border-radius: 8px;
-    border: 1.5px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    transition: border-color .2s, background .2s;
-    background: var(--panel);
-    position: relative;
-  }
-
-  .pipe-icon.active {
-    border-color: var(--accent);
-    background: rgba(0,229,160,.08);
-    box-shadow: 0 0 12px rgba(0,229,160,.15);
-  }
-
-  .pipe-icon.inactive {
-    opacity: .3;
-  }
-
-  .pipe-label {
-    font-family: var(--font-mono);
-    font-size: 8px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    text-align: center;
-  }
-
-  .pipe-arrow {
-    color: var(--border);
-    font-size: 16px;
-    padding: 0 4px;
-    margin-bottom: 16px;
-    flex-shrink: 0;
-  }
-
-  /* visualizer area */
-  .viz-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 20px 24px;
-    gap: 16px;
-    overflow-y: auto;
-  }
-
-  /* mic button */
-  .mic-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .mic-btn {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    border: 2px solid var(--accent);
-    background: transparent;
-    color: var(--accent);
-    font-size: 22px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .15s, transform .1s;
-    flex-shrink: 0;
-  }
-
-  .mic-btn:hover { background: rgba(0,229,160,.1); }
-  .mic-btn.recording {
-    background: rgba(0,229,160,.15);
-    border-color: var(--accent);
-    animation: pulse 1.4s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,160,.3); }
-    50%       { box-shadow: 0 0 0 10px rgba(0,229,160,0); }
-  }
-
-  .mic-status {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .mic-status-line {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  .mic-status-line strong {
-    color: var(--text);
-    font-weight: 500;
-  }
-
-  /* meters */
-  .meters-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .meter-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-  }
-
-  .meter-title {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: .1em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .meter-value {
-    font-family: var(--font-mono);
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--accent);
-    margin-bottom: 6px;
-  }
-
-  .meter-value.warn { color: var(--warn); }
-  .meter-value.danger { color: var(--danger); }
-
-  .bar-track {
-    height: 6px;
-    border-radius: 3px;
-    background: var(--border);
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    background: var(--accent);
-    transition: width .08s linear;
-  }
-
-  .bar-fill.warn { background: var(--warn); }
-  .bar-fill.danger { background: var(--danger); }
-
-  /* waveform canvas */
-  .waveform-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-  }
-
-  .waveform-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-
-  .waveform-title {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .1em;
-  }
-
-  .speech-pill {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 2px 10px;
-    border-radius: 10px;
-    background: var(--tag-bg);
-    color: var(--muted);
-    transition: background .2s, color .2s;
-  }
-
-  .speech-pill.active {
-    background: rgba(0,229,160,.15);
-    color: var(--accent);
-    border: 1px solid rgba(0,229,160,.3);
-  }
-
-  .speech-pill.model {
-    background: rgba(91,141,239,.15);
-    color: var(--accent2);
-    border: 1px solid rgba(91,141,239,.35);
-  }
-
-  canvas {
-    width: 100%;
-    height: 80px;
-    display: block;
-    border-radius: 4px;
-    background: var(--bg);
-  }
-
-  /* log */
-  .log-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-  }
-
-  .log-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-
-  .log-title {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .1em;
-  }
-
-  .clear-btn {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--muted);
-    font-size: 10px;
-    padding: 2px 8px;
-    cursor: pointer;
-    transition: color .15s, border-color .15s;
-  }
-
-  .clear-btn:hover { color: var(--text); border-color: var(--text); }
-
-  #log {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--muted);
-    height: 130px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .log-line { display: flex; gap: 8px; }
-
-  .log-time { color: var(--border); flex-shrink: 0; }
-
-  .log-msg.speech  { color: var(--accent); }
-  .log-msg.silence { color: var(--muted); }
-  .log-msg.noise   { color: var(--warn); }
-  .log-msg.system  { color: var(--accent2); }
-  .log-msg.error   { color: var(--danger); }
-
-  /* vad detail */
-  .vad-detail {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 6px;
-  }
-
-  .vad-prop {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--muted);
-  }
-
-  .vad-prop span { color: var(--text); }
-
-  /* scrollbar */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-  /* ── responsive ── */
-  @media (max-width: 768px) {
-    .workspace { grid-template-columns: 1fr; }
-    .sidebar { max-height: 60vh; }
-    .meters-grid { grid-template-columns: 1fr; }
-  }
-
-  .select-wrap { position: relative; }
-
-  /* vad description tooltip */
-  .vad-desc {
-    margin-top: 8px;
-    font-size: 10px;
-    color: var(--muted);
-    line-height: 1.5;
-    border-left: 2px solid var(--border);
-    padding-left: 8px;
-  }
-
-  /* mic permission warning */
-  .perm-warn {
-    background: rgba(240,160,64,.08);
-    border: 1px solid rgba(240,160,64,.3);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 11px;
-    color: var(--warn);
-    display: none;
-  }
-
-  .consecutive-row { margin-top: 10px; }
-
-  .separator {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 4px 0 8px;
+  .banner button{
+    margin-left:auto; background:transparent; border:none; color:inherit;
+    font-size:12px; font-weight:700; text-decoration:underline;
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">Voice<span>/</span>Pipeline <span>Playground</span></div>
-  <div class="badge">LIVE · BROWSER-NATIVE</div>
+  <div class="header-inner">
+    <div class="wordmark"><span class="r">Rizz</span>&nbsp;Trainer</div>
+    <div class="vitals">
+      <div class="pulse-wrap">
+        <svg viewBox="0 0 300 34" preserveAspectRatio="none">
+          <path id="pulseLine" class="pulse-line" d="M0,17 L300,17"/>
+        </svg>
+      </div>
+      <div class="score-chip">
+        <span class="num" id="avgScoreNum">—</span>
+        <span class="lbl" id="avgScoreLbl">no reps yet</span>
+      </div>
+    </div>
+    <button class="icon-btn" id="settingsBtn" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+  <div class="banner" id="noKeyBanner" style="display:none;">
+    <span>Add your Gemini API key to start training.</span>
+    <button id="bannerAddKey">Add key</button>
+  </div>
 </header>
 
-<div class="workspace">
-
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar">
-
-    <!-- VAD -->
-    <div>
-      <div class="section-label">① Voice Activity Detection</div>
-      <div class="card" id="card-vad">
-        <div class="card-header">
-          <div class="step-num">1</div>
-          <div class="card-title">VAD Engine</div>
-          <label class="toggle" style="margin-left:auto">
-            <input type="checkbox" id="vad-enabled" checked>
-            <div class="track"></div>
-            <div class="thumb"></div>
-          </label>
-        </div>
-
-        <div class="select-wrap">
-          <select id="vad-model">
-            <option value="ten">TEN VAD  (agent-tuned, ONNX/WASM · ~330 KB)</option>
-            <option value="silero">Silero VAD  (LSTM, ONNX · ~1.8 MB)</option>
-            <option value="webrtc">WebRTC VAD  (GMM energy · ~150 KB)</option>
-            <option value="cobra">Picovoice Cobra  (on-device ML · ~2 MB)</option>
-            <option value="tiny">Tiny Noise-Robust VAD  (spectral gating · &lt;50 KB)</option>
-          </select>
-        </div>
-
-        <div id="vad-desc" class="vad-desc"></div>
-
-        <div class="slider-row">
-          <div class="slider-header">
-            <span class="slider-name">Speech Threshold</span>
-            <span class="slider-val" id="thresh-val">0.70</span>
-          </div>
-          <input type="range" id="thresh" min="0.1" max="0.99" step="0.01" value="0.70">
-        </div>
-
-        <div class="slider-row consecutive-row">
-          <div class="slider-header">
-            <span class="slider-name">Consecutive frames (ms)</span>
-            <span class="slider-val" id="consec-val">200 ms</span>
-          </div>
-          <input type="range" id="consec" min="0" max="600" step="20" value="200">
-        </div>
-
-        <div class="slider-row consecutive-row">
-          <div class="slider-header">
-            <span class="slider-name">Smoothing (EMA α)</span>
-            <span class="slider-val" id="smooth-val">0.75</span>
-          </div>
-          <input type="range" id="smooth" min="0" max="0.95" step="0.05" value="0.75">
-        </div>
-
-        <p class="hint">Smoothing rejects short bursts (cough, click, keyboard). Hysteresis: enters speech at threshold, exits ~30% lower to avoid flapping.</p>
+<main>
+  <section class="chat-col">
+    <div class="scenario-bar">
+      <select id="scenarioSelect">
+        <option value="opener">Fresh match — you need an opener</option>
+        <option value="midconvo">Mid-conversation — keep the energy up</option>
+        <option value="dateask">Going for the date ask</option>
+        <option value="lowreply">She's gone a bit cold — dig out</option>
+      </select>
+      <button class="reset-btn" id="resetBtn">Reset chat</button>
+    </div>
+    <div class="chat-scroll" id="chatScroll">
+      <div class="empty-state" id="emptyState">
+        <strong>Pick a scenario and send your first line.</strong>
+        Every message you send gets scored before it goes out. She replies based on how it actually lands.
       </div>
     </div>
+    <div class="dock">
+      <div class="input-row">
+        <textarea id="msgInput" rows="1" placeholder="Type what you'd actually send…"></textarea>
+        <button class="send-btn" id="sendBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
+        </button>
+      </div>
+      <div class="hint">Every message is scored before it sends. You'll get a chance to rewrite it.</div>
+    </div>
+  </section>
 
-    <!-- Noise Suppression -->
-    <div>
-      <div class="section-label">② Neural Noise Suppression</div>
-      <div class="card" id="card-ns">
-        <div class="card-header">
-          <div class="step-num" style="background:var(--accent2)">2</div>
-          <div class="card-title">Noise Suppressor</div>
-          <label class="toggle" style="margin-left:auto">
-            <input type="checkbox" id="ns-enabled">
-            <div class="track"></div>
-            <div class="thumb"></div>
-          </label>
-        </div>
-
-        <div id="ns-controls">
-          <div class="select-wrap">
-            <select id="ns-model">
-              <option value="rnnoise">RNNoise  (recurrent NN, 48 kHz)</option>
-              <option value="deepfilter">DeepFilterNet  (dual-stage, 48 kHz)</option>
-              <option value="krisp">Krisp  (cloud-hybrid)</option>
-              <option value="maxine">NVIDIA Maxine  (GPU-accelerated)</option>
-            </select>
-          </div>
-
-          <div class="slider-row" style="margin-top:10px">
-            <div class="slider-header">
-              <span class="slider-name">Suppression Strength</span>
-              <span class="slider-val" id="ns-str-val">0.75</span>
-            </div>
-            <input type="range" id="ns-strength" min="0" max="1" step="0.05" value="0.75">
-          </div>
-
-          <p class="hint">Simulated in-browser via a gain envelope on the audio graph. Real implementations swap a WASM/Worker node here.</p>
-        </div>
+  <section class="analysis-col" id="analysisCol">
+    <div class="analysis-scroll" id="analysisScroll">
+      <div class="panel-idle" id="panelIdle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+        <div>Your Rizz Score and breakdown will land here the moment you hit send.</div>
       </div>
     </div>
+  </section>
+</main>
 
-    <!-- Speaker Separation -->
-    <div>
-      <div class="section-label">③ Speaker Separation</div>
-      <div class="card" id="card-ss">
-        <div class="card-header">
-          <div class="step-num" style="background:#9b6ef3">3</div>
-          <div class="card-title">Speaker Sep.</div>
-          <label class="toggle" style="margin-left:auto">
-            <input type="checkbox" id="ss-enabled">
-            <div class="track"></div>
-            <div class="thumb"></div>
-          </label>
-        </div>
+<button class="mobile-toggle" id="mobileToggle" style="display:none;">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+  View analysis
+</button>
+<div class="scrim" id="scrim"></div>
 
-        <div id="ss-controls">
-          <div class="select-wrap">
-            <select id="ss-mode">
-              <option value="embed">Speaker Embeddings (d-vector)</option>
-              <option value="verify">Speaker Verification</option>
-              <option value="separate">Voice Separation (Conv-TasNet)</option>
-            </select>
-          </div>
-
-          <div class="slider-row" style="margin-top:10px">
-            <div class="slider-header">
-              <span class="slider-name">Similarity Threshold</span>
-              <span class="slider-val" id="ss-thresh-val">0.60</span>
-            </div>
-            <input type="range" id="ss-thresh" min="0.1" max="0.99" step="0.01" value="0.60">
-          </div>
-
-          <p class="hint">Frames below similarity score are suppressed before reaching VAD. Simulated here — real systems embed an ECAPA-TDNN or similar.</p>
-        </div>
-      </div>
+<div class="modal-scrim" id="modalScrim">
+  <div class="modal">
+    <h3>Connect Gemini</h3>
+    <p>Rizz Trainer runs entirely in your browser. Your key is stored only in this browser's local storage and is sent directly to Google's API — never through any other server.</p>
+    <label for="apiKeyInput">Gemini API key</label>
+    <input type="password" id="apiKeyInput" placeholder="AIza…">
+    <div class="key-link" style="margin-bottom:16px;">Don't have one? <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key at Google AI Studio →</a></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save key</button>
     </div>
-
-    <!-- STT (Deepgram) -->
-    <div>
-      <div class="section-label">⑤ Speech-to-Text (Deepgram)</div>
-      <div class="card" id="card-stt">
-        <div class="card-header">
-          <div class="step-num" style="background:#e05555">5</div>
-          <div class="card-title">Deepgram STT</div>
-          <label class="toggle" style="margin-left:auto">
-            <input type="checkbox" id="stt-enabled">
-            <div class="track"></div>
-            <div class="thumb"></div>
-          </label>
-        </div>
-
-        <div id="stt-controls">
-          <div class="select-wrap" style="margin-bottom:10px">
-            <select id="stt-model">
-              <option value="nova-3">nova-3 (latest, keyterm-boosting)</option>
-              <option value="nova-2">nova-2</option>
-              <option value="nova-2-general">nova-2-general</option>
-              <option value="enhanced">enhanced</option>
-              <option value="base">base</option>
-            </select>
-          </div>
-
-          <div class="slider-row" style="margin-top:0">
-            <div class="slider-header">
-              <span class="slider-name">Deepgram API Key</span>
-              <span class="slider-val" id="stt-key-status">not set</span>
-            </div>
-            <input type="password" id="stt-key" placeholder="dg_..." style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:7px 10px;outline:none">
-          </div>
-
-          <div class="toggle-row" style="margin-top:12px;margin-bottom:0">
-            <span class="toggle-label" style="font-size:11px;color:var(--muted)">Interim results</span>
-            <label class="toggle">
-              <input type="checkbox" id="stt-interim" checked>
-              <div class="track"></div>
-              <div class="thumb"></div>
-            </label>
-          </div>
-
-          <p class="hint">Streams 16-kHz linear-PCM over WebSocket to <code style="color:var(--accent2)">api.deepgram.com/v1/listen</code>. Gated by VAD — only sends frames while speech is detected.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- AEC -->
-    <div>
-      <div class="section-label">④ Echo Cancellation (AEC)</div>
-      <div class="card" id="card-aec">
-        <div class="card-header">
-          <div class="step-num" style="background:var(--warn);color:#000">4</div>
-          <div class="card-title">AEC</div>
-          <label class="toggle" style="margin-left:auto">
-            <input type="checkbox" id="aec-enabled">
-            <div class="track"></div>
-            <div class="thumb"></div>
-          </label>
-        </div>
-
-        <div id="aec-controls">
-          <div class="select-wrap">
-            <select id="aec-mode">
-              <option value="browser">Browser nativeConstraints echoCancellation</option>
-              <option value="webrtc">WebRTC AEC3</option>
-              <option value="speex">SpeexDSP (NLMS)</option>
-            </select>
-          </div>
-
-          <div class="slider-row" style="margin-top:10px">
-            <div class="slider-header">
-              <span class="slider-name">Suppression (dB)</span>
-              <span class="slider-val" id="aec-db-val">−24 dB</span>
-            </div>
-            <input type="range" id="aec-db" min="0" max="40" step="1" value="24">
-          </div>
-
-          <p class="hint">When your agent speaks through a speaker, AEC strips its own playback voice from the mic before VAD sees it.</p>
-          <div class="chip">Echo Tail: 128 ms</div>
-          <div class="chip">Double-talk OK</div>
-        </div>
-      </div>
-    </div>
-
-  </aside>
-
-  <!-- ── MAIN ── -->
-  <main class="main">
-
-    <!-- pipeline strip -->
-    <div class="pipeline-bar" id="pipeline-bar">
-      <!-- nodes inserted by JS -->
-    </div>
-
-    <div class="viz-area">
-
-      <div class="perm-warn" id="perm-warn">
-        ⚠ Microphone permission denied or unavailable. Using simulated audio for demo.
-      </div>
-
-      <!-- mic control -->
-      <div class="mic-row">
-        <button class="mic-btn" id="mic-btn" title="Start / stop microphone">🎙</button>
-        <div class="mic-status">
-          <div class="mic-status-line" id="mic-label"><strong>Idle</strong> — click mic to start</div>
-          <div class="vad-detail" id="vad-detail">
-            <span class="vad-prop">VAD: <span id="d-vad">—</span></span>
-            <span class="vad-prop">NS: <span id="d-ns">—</span></span>
-            <span class="vad-prop">AEC: <span id="d-aec">—</span></span>
-            <span class="vad-prop">SS: <span id="d-ss">—</span></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- meters -->
-      <div class="meters-grid">
-        <div class="meter-card">
-          <div class="meter-title">Input Level (dBFS)</div>
-          <div class="meter-value" id="m-dbfs">–∞</div>
-          <div class="bar-track"><div class="bar-fill" id="b-dbfs" style="width:0%"></div></div>
-        </div>
-        <div class="meter-card">
-          <div class="meter-title">VAD Probability</div>
-          <div class="meter-value" id="m-vad">0.00</div>
-          <div class="bar-track"><div class="bar-fill" id="b-vad" style="width:0%"></div></div>
-        </div>
-        <div class="meter-card">
-          <div class="meter-title">Noise Est. (dB)</div>
-          <div class="meter-value" id="m-noise">—</div>
-          <div class="bar-track"><div class="bar-fill" id="b-noise" style="width:0%;background:var(--warn)"></div></div>
-        </div>
-        <div class="meter-card">
-          <div class="meter-title">SNR (dB)</div>
-          <div class="meter-value" id="m-snr">—</div>
-          <div class="bar-track"><div class="bar-fill" id="b-snr" style="width:0%;background:var(--accent2)"></div></div>
-        </div>
-      </div>
-
-      <!-- waveform -->
-      <div class="waveform-card">
-        <div class="waveform-header">
-          <span class="waveform-title">Waveform · post-pipeline</span>
-          <span class="speech-pill" id="speech-pill">IDLE</span>
-        </div>
-        <canvas id="waveform" height="80"></canvas>
-      </div>
-
-      <!-- transcript -->
-      <div class="log-card" id="transcript-card">
-        <div class="log-header">
-          <span class="log-title">Deepgram Transcript</span>
-          <span class="speech-pill" id="stt-pill">DISCONNECTED</span>
-        </div>
-        <div id="transcript" style="font-family:var(--font-ui);font-size:13px;line-height:1.55;color:var(--text);min-height:60px;max-height:200px;overflow-y:auto;padding:4px 0">
-          <span style="color:var(--muted);font-style:italic">— enable Deepgram STT in the sidebar and start the mic —</span>
-        </div>
-        <div id="interim" style="font-family:var(--font-ui);font-size:13px;line-height:1.55;color:var(--muted);font-style:italic;min-height:20px;margin-top:4px"></div>
-      </div>
-
-      <!-- log -->
-      <div class="log-card">
-        <div class="log-header">
-          <span class="log-title">Pipeline Event Log</span>
-          <button class="clear-btn" id="clear-btn">Clear</button>
-        </div>
-        <div id="log"></div>
-      </div>
-
-    </div>
-  </main>
+  </div>
 </div>
 
 <script>
-/* ───────────────────────────────────────────────
-   State
-─────────────────────────────────────────────── */
-const state = {
-  running: false,
-  vadEnabled: true,
-  nsEnabled: false,
-  ssEnabled: false,
-  aecEnabled: false,
-  vadModel: 'ten',
-  nsModel:  'rnnoise',
-  ssMode:   'embed',
-  aecMode:  'browser',
-  sttEnabled: false,
-  sttModel: 'nova-3',
-  sttKey: '',
-  sttInterim: true,
-  threshold:   0.70,
-  consecMs:    200,
-  smoothing:   0.75,   // EMA weight on previous probability (0 = no smoothing)
-  smoothedProb: 0,
-  speechEndMs: 0,      // ms of sub-threshold frames since last speech
-  nsStrength:  0.75,
-  ssThresh:    0.60,
-  aecDb:       24,
-  // runtime
-  speechProbability: 0,
-  isSpeech: false,
-  consecCount: 0,
-  noiseFloor: -60,
-  speechFrames: 0,
-};
+(() => {
+  const LS_KEY = 'rizzTrainer.geminiKey';
+  const MODEL = 'gemini-2.0-flash';
 
-/* ───────────────────────────────────────────────
-   Audio context & nodes
-─────────────────────────────────────────────── */
-let audioCtx, analyser, sourceNode, gainNode, stream, sttProcessor;
-const FFT = 2048;
-const DG_TARGET_RATE = 16000;
-
-/* ───────────────────────────────────────────────
-   Deepgram STT client
-─────────────────────────────────────────────── */
-const dg = {
-  ws: null,
-  open: false,
-  finals: [],     // committed transcript pieces
-  lastInterim: '',
-  keepalive: null,
-};
-
-function dgSetPill(text, active) {
-  const pill = document.getElementById('stt-pill');
-  pill.textContent = text;
-  if (active) pill.classList.add('active');
-  else pill.classList.remove('active');
-}
-
-function dgConnect() {
-  if (!state.sttEnabled) return;
-  if (!state.sttKey) {
-    logEvent('Deepgram: missing API key', 'error');
-    return;
-  }
-  if (dg.ws && (dg.ws.readyState === 0 || dg.ws.readyState === 1)) return;
-
-  const params = new URLSearchParams({
-    model: state.sttModel,
-    encoding: 'linear16',
-    sample_rate: String(DG_TARGET_RATE),
-    channels: '1',
-    interim_results: state.sttInterim ? 'true' : 'false',
-    smart_format: 'true',
-    punctuate: 'true',
-  });
-  const url = `wss://api.deepgram.com/v1/listen?${params}`;
-
-  try {
-    dg.ws = new WebSocket(url, ['token', state.sttKey]);
-  } catch (e) {
-    logEvent('Deepgram: WS construct failed — ' + e.message, 'error');
-    return;
-  }
-  dg.ws.binaryType = 'arraybuffer';
-
-  dg.ws.onopen = () => {
-    dg.open = true;
-    dgSetPill('CONNECTED', true);
-    logEvent('Deepgram: WebSocket open', 'system');
-    dg.keepalive = setInterval(() => {
-      if (dg.ws && dg.ws.readyState === 1) {
-        dg.ws.send(JSON.stringify({ type: 'KeepAlive' }));
-      }
-    }, 8000);
+  const state = {
+    apiKey: localStorage.getItem(LS_KEY) || '',
+    messages: [],       // {role:'user'|'her', text}
+    scores: [],
+    scenario: 'opener',
+    pending: null,       // current analysis result awaiting a decision
+    busy: false
   };
 
-  dg.ws.onmessage = (ev) => {
-    let msg;
-    try { msg = JSON.parse(ev.data); } catch { return; }
-    if (msg.type === 'Results' || msg.channel) {
-      const alt = msg.channel?.alternatives?.[0];
-      if (!alt) return;
-      const text = alt.transcript || '';
-      if (!text) return;
-      if (msg.is_final) {
-        dg.finals.push(text);
-        dg.lastInterim = '';
-        renderTranscript();
-        logEvent('STT: ' + text, 'speech');
-      } else {
-        dg.lastInterim = text;
-        renderTranscript();
-      }
-    } else if (msg.type === 'Metadata') {
-      logEvent('Deepgram: connected (' + (msg.model_info?.name || state.sttModel) + ')', 'system');
+  // ---------- DOM ----------
+  const chatScroll = document.getElementById('chatScroll');
+  const emptyState = document.getElementById('emptyState');
+  const msgInput = document.getElementById('msgInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const analysisScroll = document.getElementById('analysisScroll');
+  const panelIdle = document.getElementById('panelIdle');
+  const avgScoreNum = document.getElementById('avgScoreNum');
+  const avgScoreLbl = document.getElementById('avgScoreLbl');
+  const pulseLine = document.getElementById('pulseLine');
+  const noKeyBanner = document.getElementById('noKeyBanner');
+  const modalScrim = document.getElementById('modalScrim');
+  const apiKeyInput = document.getElementById('apiKeyInput');
+  const analysisCol = document.getElementById('analysisCol');
+  const mobileToggle = document.getElementById('mobileToggle');
+  const scrim = document.getElementById('scrim');
+  const scenarioSelect = document.getElementById('scenarioSelect');
+
+  function isMobile(){ return window.innerWidth <= 900; }
+
+  // ---------- Settings modal ----------
+  function openModal(){ apiKeyInput.value = state.apiKey; modalScrim.classList.add('show'); apiKeyInput.focus(); }
+  function closeModal(){ modalScrim.classList.remove('show'); }
+  document.getElementById('settingsBtn').onclick = openModal;
+  document.getElementById('bannerAddKey').onclick = openModal;
+  document.getElementById('modalCancel').onclick = closeModal;
+  modalScrim.addEventListener('click', e => { if(e.target === modalScrim) closeModal(); });
+  document.getElementById('modalSave').onclick = () => {
+    state.apiKey = apiKeyInput.value.trim();
+    localStorage.setItem(LS_KEY, state.apiKey);
+    refreshKeyBanner();
+    closeModal();
+  };
+  function refreshKeyBanner(){
+    noKeyBanner.style.display = state.apiKey ? 'none' : 'flex';
+    updateSendEnabled();
+  }
+
+  // ---------- Mobile analysis sheet ----------
+  function showAnalysisPanel(){
+    if(isMobile()){ analysisCol.classList.add('open'); scrim.classList.add('show'); }
+  }
+  function hideAnalysisPanel(){
+    if(isMobile()){ analysisCol.classList.remove('open'); scrim.classList.remove('show'); }
+  }
+  mobileToggle.onclick = showAnalysisPanel;
+  scrim.onclick = hideAnalysisPanel;
+
+  // ---------- Chat rendering ----------
+  function addMessageToDOM(role, text){
+    emptyState.style.display = 'none';
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex'; wrap.style.flexDirection = 'column';
+    wrap.style.alignItems = role === 'user' ? 'flex-end' : 'flex-start';
+    wrap.style.maxWidth = '100%';
+    const name = document.createElement('div');
+    name.className = 'msg-name';
+    name.textContent = role === 'user' ? 'You' : 'Her';
+    const bubble = document.createElement('div');
+    bubble.className = 'msg ' + role;
+    bubble.textContent = text;
+    wrap.appendChild(name); wrap.appendChild(bubble);
+    chatScroll.appendChild(wrap);
+    chatScroll.scrollTop = chatScroll.scrollHeight;
+  }
+  function addTypingIndicator(){
+    const t = document.createElement('div');
+    t.className = 'typing'; t.id = 'typingIndicator';
+    t.innerHTML = '<span></span><span></span><span></span>';
+    chatScroll.appendChild(t);
+    chatScroll.scrollTop = chatScroll.scrollHeight;
+  }
+  function removeTypingIndicator(){
+    const t = document.getElementById('typingIndicator');
+    if(t) t.remove();
+  }
+
+  // ---------- Score strip ----------
+  function tierFor(score){
+    if(score >= 80) return {label:'High Rizz', color:'var(--gold)'};
+    if(score >= 65) return {label:'Solid', color:'var(--good)'};
+    if(score >= 50) return {label:'Average', color:'#8fb6ff'};
+    if(score >= 30) return {label:'Low', color:'var(--warn)'};
+    return {label:'Damage', color:'var(--bad)'};
+  }
+  function updateScoreStrip(){
+    if(state.scores.length === 0){
+      avgScoreNum.textContent = '—';
+      avgScoreLbl.textContent = 'no reps yet';
+      drawPulse(50, 'var(--accent)');
+      return;
     }
-  };
+    const avg = Math.round(state.scores.reduce((a,b)=>a+b,0) / state.scores.length);
+    const tier = tierFor(avg);
+    avgScoreNum.textContent = avg;
+    avgScoreLbl.textContent = tier.label + ' avg';
+    drawPulse(avg, tier.color);
+  }
+  function drawPulse(score, color){
+    // amplitude scales with score: higher score = bigger, sharper heartbeat
+    const amp = 4 + (score/100) * 11;
+    const midY = 17;
+    const w = 300;
+    const spike = `M0,${midY} L${w*0.32},${midY} L${w*0.38},${midY-amp*0.4} L${w*0.44},${midY+amp} L${w*0.50},${midY-amp*1.3} L${w*0.56},${midY} L${w*0.68},${midY} L${w*0.74},${midY-amp*0.5} L${w*0.80},${midY} L${w},${midY}`;
+    pulseLine.setAttribute('d', spike);
+    pulseLine.style.stroke = color.startsWith('var') ? getComputedStyle(document.documentElement).getPropertyValue(color.slice(4,-1)) : color;
+  }
 
-  dg.ws.onerror = () => {
-    logEvent('Deepgram: WebSocket error', 'error');
-  };
+  // ---------- Analysis panel rendering ----------
+  function renderAnalysisLoading(){
+    analysisScroll.innerHTML = `
+      <div class="panel-idle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="animation:blink 1s infinite;"><circle cx="12" cy="12" r="9"/></svg>
+        <div>Reading the message…</div>
+      </div>`;
+    showAnalysisPanel();
+  }
 
-  dg.ws.onclose = (ev) => {
-    dg.open = false;
-    if (dg.keepalive) { clearInterval(dg.keepalive); dg.keepalive = null; }
-    dgSetPill('DISCONNECTED', false);
-    if (ev.code !== 1000) {
-      logEvent('Deepgram: closed (' + ev.code + ' ' + (ev.reason || '') + ')', 'error');
-    } else {
-      logEvent('Deepgram: closed', 'system');
+  function circleDasharray(score){
+    const r = 30, c = 2*Math.PI*r;
+    const filled = c * (score/100);
+    return {c, filled, r};
+  }
+
+  function renderAnalysis(result, originalText){
+    const tier = tierFor(result.score);
+    const {c, filled} = circleDasharray(result.score);
+    const strengthsHTML = (result.strengths||[]).map(s => `<div class="fb-item good"><span class="dot"></span><span>${escapeHTML(s)}</span></div>`).join('');
+    const weaknessesHTML = (result.weaknesses||[]).map(s => `<div class="fb-item bad"><span class="dot"></span><span>${escapeHTML(s)}</span></div>`).join('');
+
+    const factorKeys = [
+      ['length','Length'], ['openLoop','Open Loop'], ['tone','Tone'],
+      ['pressure','Pressure'], ['focus','Focus'], ['risk','Risk']
+    ];
+    let factorsHTML = '';
+    if(result.factorNotes){
+      factorsHTML = `<div class="factor-grid">` + factorKeys.map(([k,label]) => {
+        const note = result.factorNotes[k];
+        if(!note) return '';
+        return `<div class="factor-pill"><b>${label}</b>${escapeHTML(note)}</div>`;
+      }).join('') + `</div>`;
     }
-  };
-}
 
-function dgDisconnect() {
-  if (dg.ws && dg.ws.readyState <= 1) {
-    try { dg.ws.send(JSON.stringify({ type: 'CloseStream' })); } catch {}
-    try { dg.ws.close(1000, 'client done'); } catch {}
-  }
-  dg.ws = null;
-  dg.open = false;
-  if (dg.keepalive) { clearInterval(dg.keepalive); dg.keepalive = null; }
-  dgSetPill('DISCONNECTED', false);
-}
-
-function renderTranscript() {
-  const finalEl = document.getElementById('transcript');
-  const interimEl = document.getElementById('interim');
-  if (dg.finals.length === 0 && !dg.lastInterim) {
-    finalEl.innerHTML = '<span style="color:var(--muted);font-style:italic">— waiting for speech —</span>';
-  } else {
-    finalEl.textContent = dg.finals.join(' ');
-    finalEl.scrollTop = finalEl.scrollHeight;
-  }
-  interimEl.textContent = dg.lastInterim;
-}
-
-function floatTo16BitPCM(float32, srcRate) {
-  // Downsample to 16 kHz (linear interpolation) then convert to int16 little-endian
-  const ratio = srcRate / DG_TARGET_RATE;
-  const outLen = Math.floor(float32.length / ratio);
-  const out = new Int16Array(outLen);
-  for (let i = 0; i < outLen; i++) {
-    const srcIdx = i * ratio;
-    const i0 = Math.floor(srcIdx);
-    const i1 = Math.min(i0 + 1, float32.length - 1);
-    const frac = srcIdx - i0;
-    const s = float32[i0] * (1 - frac) + float32[i1] * frac;
-    const clamped = Math.max(-1, Math.min(1, s));
-    out[i] = clamped < 0 ? clamped * 0x8000 : clamped * 0x7FFF;
-  }
-  return out.buffer;
-}
-
-function attachSttProcessor() {
-  if (!state.sttEnabled || !audioCtx || !sourceNode) return;
-  const bufSize = 4096;
-  sttProcessor = audioCtx.createScriptProcessor(bufSize, 1, 1);
-  let sentChunks = 0;
-  let sentBytes = 0;
-  sttProcessor.onaudioprocess = (e) => {
-    if (!dg.ws || dg.ws.readyState !== 1) return;
-    const input = e.inputBuffer.getChannelData(0);
-    const pcm = floatTo16BitPCM(input, audioCtx.sampleRate);
-    try {
-      dg.ws.send(pcm);
-      sentChunks++;
-      sentBytes += pcm.byteLength;
-      if (sentChunks === 1) logEvent(`Deepgram: streaming PCM (16 kHz)`, 'system');
-      if (sentChunks % 50 === 0) logEvent(`Deepgram: ${sentChunks} chunks (${(sentBytes/1024).toFixed(1)} KB)`, 'system');
-    } catch {}
-  };
-  sourceNode.connect(sttProcessor);
-  // ScriptProcessor needs to be connected to a destination to fire, but we
-  // don't want playback — route through a muted gain.
-  const mute = audioCtx.createGain();
-  mute.gain.value = 0;
-  sttProcessor.connect(mute);
-  mute.connect(audioCtx.destination);
-}
-
-function detachSttProcessor() {
-  if (sttProcessor) {
-    try { sttProcessor.disconnect(); } catch {}
-    sttProcessor.onaudioprocess = null;
-    sttProcessor = null;
-  }
-}
-
-
-const timeData = new Float32Array(FFT);
-const freqData = new Uint8Array(FFT / 2);
-
-/* ───────────────────────────────────────────────
-   VAD descriptions
-─────────────────────────────────────────────── */
-const VAD_DESC = {
-  ten:     'TEN VAD (ten-framework) — agent-first neural VAD. ONNX/WASM, ~330 KB, 16 kHz, 256-sample hop. Outperforms Silero/WebRTC on conversational corpora with lower CPU. Fast enough to gate LLM turn-taking.',
-  silero:  'Silero VAD — LSTM trained on 6k+ languages. ONNX ~1.8 MB, runs WASM in browser. ~8 ms latency, excellent accuracy across noise conditions.',
-  webrtc:  'WebRTC VAD — energy-based GMM shipped with Chromium. ~150 KB, <2 ms latency. Best in quiet environments; misfires on tonal noise (music, fans).',
-  cobra:   'Picovoice Cobra — proprietary on-device ML VAD, ~2 MB. Designed for always-on wake-word pipelines. Requires a license key in production.',
-  tiny:    'Tiny noise-robust VAD — spectral-gating heuristic + short-time energy. No model file (<50 KB of code), zero deps. OK for keyword spotting with prior noise profiling.',
-};
-
-/* ───────────────────────────────────────────────
-   Pipeline node config
-─────────────────────────────────────────────── */
-const PIPE_NODES = [
-  { id: 'mic',  icon: '🎙', label: 'MIC',   always: true },
-  { id: 'aec',  icon: '🔇', label: 'AEC',   key: 'aecEnabled' },
-  { id: 'ns',   icon: '🧹', label: 'NS',    key: 'nsEnabled' },
-  { id: 'ss',   icon: '👤', label: 'SPKR',  key: 'ssEnabled' },
-  { id: 'vad',  icon: '🔍', label: 'VAD',   key: 'vadEnabled' },
-  { id: 'stt',  icon: '📝', label: 'STT',   always: true },
-];
-
-function buildPipeline() {
-  const bar = document.getElementById('pipeline-bar');
-  bar.innerHTML = '';
-  PIPE_NODES.forEach((n, i) => {
-    const active = n.always || state[n.key];
-    const arrow = i < PIPE_NODES.length - 1
-      ? `<div class="pipe-arrow">›</div>` : '';
-    bar.innerHTML += `
-      <div class="pipe-node">
-        <div class="pipe-icon ${active ? 'active' : 'inactive'}" id="pnode-${n.id}">
-          ${n.icon}
+    analysisScroll.innerHTML = `
+      <div class="analysis-card">
+        <div class="verdict-block">
+          <div class="score-ring">
+            <svg viewBox="0 0 72 72">
+              <circle class="bg" cx="36" cy="36" r="30"></circle>
+              <circle class="fg" cx="36" cy="36" r="30"
+                stroke="${tier.color}"
+                stroke-dasharray="${c}"
+                stroke-dashoffset="${c}"></circle>
+            </svg>
+            <div class="val">${Math.round(result.score)}</div>
+          </div>
+          <div class="verdict-text">
+            <div class="tag" style="color:${tier.color}">${tier.label}</div>
+            <div class="sub">Rizz Score ${Math.round(result.score)}/100</div>
+          </div>
         </div>
-        <div class="pipe-label">${n.label}</div>
+
+        ${strengthsHTML ? `<div class="fb-section"><h4>What's working</h4><div class="fb-list">${strengthsHTML}</div></div>` : ''}
+        ${weaknessesHTML ? `<div class="fb-section"><h4>What's weak</h4><div class="fb-list">${weaknessesHTML}</div></div>` : ''}
+        ${factorsHTML ? `<div class="fb-section"><h4>Factor read</h4>${factorsHTML}</div>` : ''}
+
+        <div class="rewrite-box">
+          <h4>Rewritten version</h4>
+          <p>${escapeHTML(result.rewrite || '')}</p>
+        </div>
+
+        <div class="panel-actions">
+          <button class="btn primary" id="useRewriteBtn">Send the rewrite</button>
+          <button class="btn" id="sendOriginalBtn">Send my original anyway</button>
+          <button class="btn ghost" id="rewriteMoreBtn">Go back and edit</button>
+        </div>
       </div>
-      ${arrow}
     `;
-  });
-}
+    // animate ring
+    requestAnimationFrame(() => {
+      const fg = analysisScroll.querySelector('.score-ring .fg');
+      if(fg) fg.style.strokeDashoffset = String(c - filled);
+    });
 
-/* ───────────────────────────────────────────────
-   Simulate VAD probability from audio energy
-─────────────────────────────────────────────── */
-function computeSpeechProb(dbfs) {
-  // Simulate model-specific behaviour
-  let prob = 0;
-  const model = state.vadModel;
-  const noiseFloor = state.noiseFloor;
-  const snr = dbfs - noiseFloor;
-
-  if (model === 'ten') {
-    // TEN VAD — sharp, agent-tuned. Fast onset, robust to low-level noise.
-    prob = 1 / (1 + Math.exp(-(snr - 7) * 0.5));
-  } else if (model === 'webrtc') {
-    // Step-ish: energy threshold
-    prob = snr < 4 ? 0 : Math.min(1, (snr - 4) / 16);
-  } else if (model === 'silero') {
-    // Smoother sigmoid
-    prob = 1 / (1 + Math.exp(-(snr - 10) * 0.35));
-  } else if (model === 'cobra') {
-    // Sharper on-device style
-    prob = snr < 6 ? 0 : Math.min(1, (snr - 6) / 12);
-  } else {
-    // tiny: spectral gating — slightly noisier estimate
-    const jitter = (Math.random() - 0.5) * 0.1;
-    prob = Math.max(0, Math.min(1, 1 / (1 + Math.exp(-(snr - 12) * 0.3)) + jitter));
+    document.getElementById('useRewriteBtn').onclick = () => confirmSend(result.rewrite, result.score);
+    document.getElementById('sendOriginalBtn').onclick = () => confirmSend(originalText, result.score);
+    document.getElementById('rewriteMoreBtn').onclick = () => {
+      msgInput.value = originalText;
+      autosizeInput();
+      resetPanel();
+      hideAnalysisPanel();
+      msgInput.focus();
+    };
   }
 
-  // Speaker separation: suppress low-similarity frames
-  if (state.ssEnabled) {
-    const simScore = 0.4 + Math.random() * 0.6; // simulated
-    if (simScore < state.ssThresh) prob *= 0.2;
+  function resetPanel(){
+    analysisScroll.innerHTML = `
+      <div class="panel-idle" id="panelIdle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+        <div>Your Rizz Score and breakdown will land here the moment you hit send.</div>
+      </div>`;
   }
 
-  return prob;
-}
-
-function updateNoiseFloor(dbfs) {
-  // Slow-track minimum
-  if (!state.isSpeech) {
-    state.noiseFloor = state.noiseFloor * 0.97 + dbfs * 0.03;
-    state.noiseFloor = Math.max(-80, Math.min(-20, state.noiseFloor));
-  }
-}
-
-/* ───────────────────────────────────────────────
-   Animation loop
-─────────────────────────────────────────────── */
-const canvas = document.getElementById('waveform');
-const ctx2d  = canvas.getContext('2d');
-
-function animLoop() {
-  if (!state.running) return;
-  requestAnimationFrame(animLoop);
-
-  analyser.getFloatTimeDomainData(timeData);
-  analyser.getByteFrequencyData(freqData);
-
-  // RMS → dBFS
-  let rms = 0;
-  for (let i = 0; i < FFT; i++) rms += timeData[i] * timeData[i];
-  rms = Math.sqrt(rms / FFT);
-  const dbfs = rms > 0 ? 20 * Math.log10(rms) : -100;
-
-  updateNoiseFloor(dbfs);
-  const snr = dbfs - state.noiseFloor;
-
-  // Apply NS gain reduction (simulated)
-  let processedDbfs = dbfs;
-  if (state.nsEnabled) {
-    const reduction = state.nsStrength * Math.max(0, -snr) * 0.5;
-    processedDbfs = dbfs + reduction * 0.4; // noise floor raised
-    // Suppress the gain node slightly
-    gainNode.gain.setTargetAtTime(
-      snr < 2 ? (1 - state.nsStrength * 0.6) : 1,
-      audioCtx.currentTime, 0.05
-    );
-  } else {
-    gainNode.gain.setTargetAtTime(1, audioCtx.currentTime, 0.05);
+  function escapeHTML(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
   }
 
-  // VAD — raw probability
-  const rawProb = state.vadEnabled ? computeSpeechProb(dbfs) : 1.0;
-
-  // EMA smoothing: rejects short bursts (coughs, clicks, keyboard taps)
-  const a = state.smoothing;
-  state.smoothedProb = a * state.smoothedProb + (1 - a) * rawProb;
-  const prob = state.smoothedProb;
-  state.speechProbability = prob;
-
-  // Hysteresis: higher enter threshold, lower exit threshold (~-30%)
-  const FRAME_MS = (FFT / (audioCtx.sampleRate || 44100)) * 1000;
-  const enterT = state.threshold;
-  const exitT  = Math.max(0.05, state.threshold * 0.7);
-
-  const prevSpeech = state.isSpeech;
-  if (!state.isSpeech) {
-    // accumulating toward speech
-    if (prob >= enterT) state.speechFrames += FRAME_MS;
-    else                state.speechFrames = 0;
-    if (state.speechFrames >= state.consecMs) state.isSpeech = true;
-  } else {
-    // in speech, only exit after a hangover of sub-exitT frames
-    if (prob < exitT) state.speechEndMs += FRAME_MS;
-    else              state.speechEndMs = 0;
-    if (state.speechEndMs >= Math.max(150, state.consecMs)) {
-      state.isSpeech = false;
-      state.speechFrames = 0;
-      state.speechEndMs = 0;
-    }
-  }
-
-  // Log transitions
-  if (state.isSpeech !== prevSpeech) {
-    if (state.isSpeech) logEvent('● USER TURN — speaking', 'speech');
-    else                logEvent('◆ MODEL TURN — user paused', 'silence');
-  }
-
-  // Update metrics UI
-  const dbfsClamp = Math.max(-80, dbfs);
-  const dbfsPct   = ((dbfsClamp + 80) / 80) * 100;
-  setMeter('dbfs', dbfsClamp.toFixed(1) + ' dB', dbfsPct, dbfsPct > 80 ? 'danger' : dbfsPct > 60 ? 'warn' : '');
-  setMeter('vad',  prob.toFixed(2), prob * 100, prob >= state.threshold ? '' : '');
-  setMeter('noise', state.noiseFloor.toFixed(1) + ' dB', Math.abs((state.noiseFloor + 80) / 80) * 100, '');
-  const snrClamped = Math.max(0, Math.min(40, snr));
-  setMeter('snr', snrClamped.toFixed(1) + ' dB', (snrClamped / 40) * 100, '');
-
-  // VAD probability bar color
-  const bvad = document.getElementById('b-vad');
-  bvad.style.background = prob >= state.threshold ? 'var(--accent)' : 'var(--muted)';
-
-  // turn pill (user vs model) — based on VAD state
-  const pill = document.getElementById('speech-pill');
-  if (state.isSpeech) {
-    pill.textContent = '● USER TURN';
-    pill.classList.add('active');
-    pill.classList.remove('model');
-  } else {
-    pill.textContent = '◆ MODEL TURN';
-    pill.classList.remove('active');
-    pill.classList.add('model');
-  }
-
-  // draw waveform
-  drawWaveform();
-}
-
-function setMeter(id, val, pct, cls) {
-  const mv = document.getElementById('m-' + id);
-  const bv = document.getElementById('b-' + id);
-  if (!mv) return;
-  mv.textContent = val;
-  mv.className = 'meter-value' + (cls ? ' ' + cls : '');
-  bv.style.width = Math.min(100, Math.max(0, pct)) + '%';
-  if (id !== 'vad') {
-    bv.className = 'bar-fill' + (cls ? ' ' + cls : '');
-  }
-}
-
-function drawWaveform() {
-  const W = canvas.offsetWidth;
-  const H = canvas.offsetHeight;
-  canvas.width  = W * devicePixelRatio;
-  canvas.height = H * devicePixelRatio;
-  ctx2d.scale(devicePixelRatio, devicePixelRatio);
-
-  ctx2d.fillStyle = '#0d0f14';
-  ctx2d.fillRect(0, 0, W, H);
-
-  // grid line at centre
-  ctx2d.strokeStyle = '#1a1e2a';
-  ctx2d.lineWidth = 1;
-  ctx2d.beginPath();
-  ctx2d.moveTo(0, H / 2);
-  ctx2d.lineTo(W, H / 2);
-  ctx2d.stroke();
-
-  // waveform
-  ctx2d.beginPath();
-  ctx2d.strokeStyle = state.isSpeech ? '#00e5a0' : '#2d3348';
-  ctx2d.lineWidth = 1.5;
-
-  const step = Math.ceil(FFT / W);
-  for (let i = 0; i < W; i++) {
-    const v = timeData[i * step] || 0;
-    const y = (1 - (v + 1) / 2) * H;
-    i === 0 ? ctx2d.moveTo(i, y) : ctx2d.lineTo(i, y);
-  }
-  ctx2d.stroke();
-}
-
-/* ───────────────────────────────────────────────
-   Log
-─────────────────────────────────────────────── */
-function logEvent(msg, type = 'system') {
-  const log = document.getElementById('log');
-  const now = new Date();
-  const t   = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-             + '.' + String(now.getMilliseconds()).padStart(3, '0');
-  const line = document.createElement('div');
-  line.className = 'log-line';
-  line.innerHTML = `<span class="log-time">${t}</span><span class="log-msg ${type}">${msg}</span>`;
-  log.appendChild(line);
-  log.scrollTop = log.scrollHeight;
-
-  // Keep at most 200 lines
-  while (log.children.length > 200) log.removeChild(log.firstChild);
-}
-
-/* ───────────────────────────────────────────────
-   Mic start / stop
-─────────────────────────────────────────────── */
-async function startMic() {
-  try {
-    const constraints = {
-      audio: {
-        echoCancellation: state.aecEnabled && state.aecMode === 'browser',
-        noiseSuppression: false, // we handle NS ourselves in sim
-        autoGainControl: false,
-        sampleRate: 48000,
+  // ---------- Gemini calls ----------
+  async function callGemini(systemInstruction, contents, schema){
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(state.apiKey)}`;
+    const body = {
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      contents,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: schema,
+        temperature: 0.9
       }
     };
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-  } catch (e) {
-    document.getElementById('perm-warn').style.display = 'block';
-    logEvent('Mic unavailable — using simulated audio', 'error');
-    startSimulated();
-    return;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){
+      const errText = await res.text().catch(()=> '');
+      throw new Error(`Gemini API error (${res.status}): ${errText.slice(0,200)}`);
+    }
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '{}';
+    return JSON.parse(text);
   }
 
-  audioCtx  = new AudioContext({ sampleRate: 48000 });
-  analyser  = audioCtx.createAnalyser();
-  gainNode  = audioCtx.createGain();
-  analyser.fftSize = FFT;
-  analyser.smoothingTimeConstant = 0.7;
-  sourceNode = audioCtx.createMediaStreamSource(stream);
-  sourceNode.connect(gainNode);
-  gainNode.connect(analyser);
-  // don't connect to destination (avoids feedback)
-
-  logEvent('Mic acquired · pipeline running', 'system');
-  state.running = true;
-  if (state.sttEnabled) { dgConnect(); attachSttProcessor(); }
-  requestAnimationFrame(animLoop);
-}
-
-function startSimulated() {
-  audioCtx  = new AudioContext({ sampleRate: 44100 });
-  analyser  = audioCtx.createAnalyser();
-  gainNode  = audioCtx.createGain();
-  analyser.fftSize = FFT;
-  analyser.smoothingTimeConstant = 0.5;
-
-  // Oscillator-based fake voice + noise
-  const osc = audioCtx.createOscillator();
-  osc.frequency.value = 200;
-  const oscGain = audioCtx.createGain();
-  oscGain.gain.value = 0;
-  osc.connect(oscGain);
-
-  const bufSrc = audioCtx.createScriptProcessor(FFT, 1, 1);
-  bufSrc.onaudioprocess = (e) => {
-    const out = e.outputBuffer.getChannelData(0);
-    for (let i = 0; i < out.length; i++) {
-      out[i] = (Math.random() * 2 - 1) * 0.04; // noise floor
-    }
+  const ANALYSIS_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+      score: { type: 'NUMBER' },
+      verdict: { type: 'STRING' },
+      strengths: { type: 'ARRAY', items: { type: 'STRING' } },
+      weaknesses: { type: 'ARRAY', items: { type: 'STRING' } },
+      rewrite: { type: 'STRING' },
+      factorNotes: {
+        type: 'OBJECT',
+        properties: {
+          length: { type: 'STRING' },
+          openLoop: { type: 'STRING' },
+          tone: { type: 'STRING' },
+          pressure: { type: 'STRING' },
+          focus: { type: 'STRING' },
+          risk: { type: 'STRING' }
+        }
+      }
+    },
+    required: ['score','verdict','strengths','weaknesses','rewrite']
   };
-  bufSrc.connect(audioCtx.destination);
 
-  oscGain.connect(gainNode);
-  gainNode.connect(analyser);
-  gainNode.connect(audioCtx.destination);
-  osc.start();
+  const REPLY_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+      reply: { type: 'STRING' },
+      interestShift: { type: 'STRING' }
+    },
+    required: ['reply']
+  };
 
-  // Simulate speech bursts
-  let simTimer;
-  function scheduleBurst() {
-    const delay = 1500 + Math.random() * 2000;
-    simTimer = setTimeout(() => {
-      const dur = 600 + Math.random() * 1200;
-      oscGain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
-      setTimeout(() => oscGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1), dur);
-      scheduleBurst();
-    }, delay);
+  const SCENARIO_CONTEXT = {
+    opener: "This is a fresh match on a dating app (Hinge-style). There has been no conversation yet. The user is about to send the opening message.",
+    midconvo: "This is an ongoing dating-app conversation that is going fine. The user needs to keep her engaged and build attraction.",
+    dateask: "The conversation has warmed up. The user is now trying to transition the chat into asking her out on a real date.",
+    lowreply: "Her replies have been getting shorter, slower, or flatter. The user needs to either re-spark interest or gracefully read the room."
+  };
+
+  function analysisSystemPrompt(){
+    return `You are a blunt, expert dating-app texting coach for straight men messaging women on apps like Hinge and Bumble. You evaluate a single message the user is about to send and return ONLY the JSON described by the schema — no prose outside it.
+
+CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
+
+Score from 0-100. Start at a baseline of 50 and adjust up or down based on these seven factors, weighing them holistically rather than mechanically:
+1. Length — shorter, punchier messages generally score better than long paragraphs.
+2. Open loop / ease of reply — does it give her something easy and specific to respond to?
+3. Tone & energy — playful, warm, teasing, confident beats needy, heavy, or try-hard.
+4. Pressure & neediness — does it demand a response, over-explain, or seek reassurance? Penalize this.
+5. Focus — is it about her (her interests, her photos, her words) or mostly about him?
+6. Risk level — light, confident, playful risk (a tease, a bold call-out) is good; awkward, corny, or try-hard risk is bad.
+7. Overall likelihood a woman would actually reply positively to this, given real dating-app norms.
+
+Score bands: 80-100 High Rizz, 65-79 Solid, 50-64 Average, 30-49 Low, 0-29 Damage. Set "verdict" to the matching label.
+
+Give 2-4 short, specific strengths (empty array if truly none) and 2-4 short, specific weaknesses (empty array if truly none) — reference the actual words he used, not generic advice.
+
+Always provide "rewrite": a single improved version of the message that keeps his intent and voice but fixes the weaknesses — punchy, natural texting style, not corny, no emojis unless the original had a natural place for one.
+
+Fill "factorNotes" with a very short (under 10 words each) note per factor.
+
+Be direct and coach-like, not sycophantic. Do not invent conversation that hasn't happened.`;
   }
-  scheduleBurst();
 
-  state.running = true;
-  requestAnimationFrame(animLoop);
-}
+  function replySystemPrompt(){
+    return `You are simulating "Her" — a woman on a dating app receiving a message from a match. Given the conversation so far and a 0-100 quality score for the man's most recent message, write how she would realistically reply by text.
 
-async function toggleMic() {
-  if (state.running) {
-    state.running = false;
-    detachSttProcessor();
-    dgDisconnect();
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    if (audioCtx) audioCtx.close();
-    sourceNode = null;
-    document.getElementById('mic-btn').classList.remove('recording');
-    document.getElementById('mic-label').innerHTML = '<strong>Idle</strong> — click mic to start';
-    setMeter('dbfs', '–∞', 0, '');
-    setMeter('vad',  '0.00', 0, '');
-    setMeter('noise', '—', 0, '');
-    setMeter('snr',   '—', 0, '');
-    logEvent('Pipeline stopped', 'system');
-    const sp = document.getElementById('speech-pill');
-    sp.textContent = 'IDLE';
-    sp.classList.remove('active');
-    sp.classList.remove('model');
-  } else {
-    document.getElementById('mic-btn').classList.add('recording');
-    document.getElementById('mic-label').innerHTML = '<strong>Active</strong> · listening…';
-    await startMic();
+CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
+
+Rules:
+- If the score is high (65+), reply warmer, more engaged, ask a question back, use more words or enthusiasm.
+- If the score is average (50-64), reply politely but neutrally — fine, not thrilled.
+- If the score is low (30-49), reply shorter, flatter, slower-feeling, less effort, maybe just an acknowledgment.
+- If the score is very low (0-29), reply cold, minimal, or borderline disengaged — but stay realistic and non-cartoonish, not cruel.
+- Keep her replies to real texting length (usually under 30 words), casual, lowercase-leaning like real texting, no more than one emoji and only if it fits naturally.
+- Stay consistent with whatever personality/interests have emerged earlier in the conversation.
+- Return ONLY the JSON in the schema.`;
   }
-}
 
-/* ───────────────────────────────────────────────
-   Detail row
-─────────────────────────────────────────────── */
-function updateDetailRow() {
-  document.getElementById('d-vad').textContent = state.vadEnabled
-    ? ({ ten:'TEN', silero:'Silero', webrtc:'WebRTC', cobra:'Cobra', tiny:'Tiny' }[state.vadModel] || state.vadModel)
-    : 'OFF';
-  document.getElementById('d-ns').textContent  = state.nsEnabled  ? state.nsModel  : 'OFF';
-  document.getElementById('d-aec').textContent = state.aecEnabled ? state.aecMode  : 'OFF';
-  document.getElementById('d-ss').textContent  = state.ssEnabled  ? state.ssMode   : 'OFF';
-}
-
-/* ───────────────────────────────────────────────
-   UI wiring
-─────────────────────────────────────────────── */
-function wireToggle(id, stateKey, cardId, controlsId) {
-  const el = document.getElementById(id);
-  el.addEventListener('change', () => {
-    state[stateKey] = el.checked;
-    if (controlsId) {
-      document.getElementById(controlsId).style.opacity = el.checked ? '1' : '.35';
-      document.getElementById(controlsId).style.pointerEvents = el.checked ? '' : 'none';
+  function conversationAsContents(includeDraft, draftText){
+    const contents = state.messages.map(m => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.text }]
+    }));
+    if(includeDraft){
+      contents.push({ role: 'user', parts: [{ text: `[DRAFT MESSAGE TO EVALUATE]: ${draftText}` }] });
     }
-    buildPipeline();
-    updateDetailRow();
-    logEvent(`${stateKey.replace('Enabled','').toUpperCase()} ${el.checked ? 'enabled' : 'disabled'}`, 'system');
+    if(contents.length === 0){
+      contents.push({ role: 'user', parts: [{ text: '(no messages yet)' }] });
+    }
+    return contents;
+  }
+
+  // ---------- Flow ----------
+  async function handleSend(){
+    const text = msgInput.value.trim();
+    if(!text || state.busy) return;
+    if(!state.apiKey){ openModal(); return; }
+
+    state.busy = true;
+    updateSendEnabled();
+    renderAnalysisLoading();
+
+    try{
+      const contents = conversationAsContents(true, text);
+      const result = await callGemini(analysisSystemPrompt(), contents, ANALYSIS_SCHEMA);
+      result.score = Math.max(0, Math.min(100, Math.round(result.score)));
+      state.pending = { result, originalText: text };
+      renderAnalysis(result, text);
+    }catch(err){
+      renderError(err);
+    }finally{
+      state.busy = false;
+      updateSendEnabled();
+    }
+  }
+
+  function renderError(err){
+    analysisScroll.innerHTML = `
+      <div class="panel-idle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        <div style="color:var(--bad); margin-bottom:6px;">Something went wrong.</div>
+        <div style="font-size:12px; color:var(--text-faint);">${escapeHTML(err.message || String(err))}</div>
+      </div>`;
+  }
+
+  async function confirmSend(text, score){
+    // push user's message
+    state.messages.push({ role:'user', text });
+    state.scores.push(score);
+    addMessageToDOM('user', text);
+    updateScoreStrip();
+    resetPanel();
+    hideAnalysisPanel();
+    msgInput.value = '';
+    autosizeInput();
+
+    addTypingIndicator();
+    try{
+      const contents = conversationAsContents(false);
+      const result = await callGemini(replySystemPrompt() + `\n\nThe man's last message scored ${score}/100 on the rizz scale.`, contents, REPLY_SCHEMA);
+      removeTypingIndicator();
+      state.messages.push({ role:'her', text: result.reply });
+      addMessageToDOM('her', result.reply);
+    }catch(err){
+      removeTypingIndicator();
+      addMessageToDOM('her', "(she didn't get a reply back — connection error)");
+      console.error(err);
+    }
+  }
+
+  function resetChat(){
+    state.messages = [];
+    state.scores = [];
+    state.pending = null;
+    chatScroll.innerHTML = '';
+    chatScroll.appendChild(emptyState);
+    emptyState.style.display = 'block';
+    resetPanel();
+    updateScoreStrip();
+  }
+
+  // ---------- Input handling ----------
+  function autosizeInput(){
+    msgInput.style.height = 'auto';
+    msgInput.style.height = Math.min(120, msgInput.scrollHeight) + 'px';
+  }
+  function updateSendEnabled(){
+    sendBtn.disabled = state.busy || !msgInput.value.trim();
+  }
+  msgInput.addEventListener('input', () => { autosizeInput(); updateSendEnabled(); });
+  msgInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      handleSend();
+    }
   });
-}
+  sendBtn.addEventListener('click', handleSend);
+  document.getElementById('resetBtn').addEventListener('click', resetChat);
+  scenarioSelect.addEventListener('change', () => { state.scenario = scenarioSelect.value; });
 
-function wireSlider(id, stateKey, displayId, format) {
-  const el = document.getElementById(id);
-  el.addEventListener('input', () => {
-    const v = parseFloat(el.value);
-    state[stateKey] = v;
-    document.getElementById(displayId).textContent = format(v);
+  window.addEventListener('resize', () => {
+    mobileToggle.style.display = isMobile() ? 'flex' : 'none';
   });
-}
+  mobileToggle.style.display = isMobile() ? 'flex' : 'none';
 
-function wireSelect(id, stateKey, onChangeFn) {
-  const el = document.getElementById(id);
-  el.addEventListener('change', () => {
-    state[stateKey] = el.value;
-    if (onChangeFn) onChangeFn(el.value);
-    updateDetailRow();
-  });
-}
-
-function updateVadDesc(model) {
-  document.getElementById('vad-desc').textContent = VAD_DESC[model] || '';
-}
-
-/* ───────────────────────────────────────────────
-   Boot
-─────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-
-  buildPipeline();
-
-  // Toggles
-  wireToggle('vad-enabled', 'vadEnabled', 'card-vad', null);
-  wireToggle('ns-enabled',  'nsEnabled',  'card-ns',  'ns-controls');
-  wireToggle('ss-enabled',  'ssEnabled',  'card-ss',  'ss-controls');
-  wireToggle('aec-enabled', 'aecEnabled', 'card-aec', 'aec-controls');
-  wireToggle('stt-enabled', 'sttEnabled', 'card-stt', 'stt-controls');
-
-  // STT controls
-  const sttKeyEl = document.getElementById('stt-key');
-  const sttKeyStatus = document.getElementById('stt-key-status');
-  const savedKey = (() => { try { return localStorage.getItem('dg_key') || ''; } catch { return ''; } })();
-  if (savedKey) { sttKeyEl.value = savedKey; state.sttKey = savedKey; sttKeyStatus.textContent = 'saved'; }
-  sttKeyEl.addEventListener('input', () => {
-    state.sttKey = sttKeyEl.value.trim();
-    try { localStorage.setItem('dg_key', state.sttKey); } catch {}
-    sttKeyStatus.textContent = state.sttKey ? 'saved' : 'not set';
-  });
-  document.getElementById('stt-model').addEventListener('change', (e) => {
-    state.sttModel = e.target.value;
-    if (state.sttEnabled && state.running) { dgDisconnect(); dgConnect(); }
-  });
-  document.getElementById('stt-interim').addEventListener('change', (e) => {
-    state.sttInterim = e.target.checked;
-    if (state.sttEnabled && state.running) { dgDisconnect(); dgConnect(); }
-  });
-
-  // Toggle reaction: connect/disconnect live
-  document.getElementById('stt-enabled').addEventListener('change', (e) => {
-    if (!state.running) return;
-    if (e.target.checked) { dgConnect(); attachSttProcessor(); }
-    else { detachSttProcessor(); dgDisconnect(); }
-  });
-
-  // Selects
-  wireSelect('vad-model', 'vadModel', updateVadDesc);
-  wireSelect('ns-model',  'nsModel');
-  wireSelect('ss-mode',   'ssMode');
-  wireSelect('aec-mode',  'aecMode');
-
-  // Sliders
-  wireSlider('thresh',    'threshold',  'thresh-val',   v => v.toFixed(2));
-  wireSlider('consec',    'consecMs',   'consec-val',   v => v + ' ms');
-  wireSlider('smooth',    'smoothing',  'smooth-val',   v => v.toFixed(2));
-  wireSlider('ns-strength','nsStrength','ns-str-val',   v => v.toFixed(2));
-  wireSlider('ss-thresh', 'ssThresh',   'ss-thresh-val',v => v.toFixed(2));
-  wireSlider('aec-db',    'aecDb',      'aec-db-val',   v => '−' + v + ' dB');
-
-  // Mic button
-  document.getElementById('mic-btn').addEventListener('click', toggleMic);
-
-  // Clear log
-  document.getElementById('clear-btn').addEventListener('click', () => {
-    document.getElementById('log').innerHTML = '';
-  });
-
-  // Initial VAD desc
-  updateVadDesc('ten');
-
-  // Initial detail row
-  updateDetailRow();
-
-  // Disable NS / SS / AEC controls by default (toggles are off)
-  ['ns-controls','ss-controls','aec-controls','stt-controls'].forEach(id => {
-    document.getElementById(id).style.opacity = '.35';
-    document.getElementById(id).style.pointerEvents = 'none';
-  });
-
-  logEvent('Pipeline Playground ready — configure options then click 🎙', 'system');
-});
+  // ---------- Init ----------
+  refreshKeyBanner();
+  updateScoreStrip();
+  if(!state.apiKey) setTimeout(openModal, 400);
+})();
 </script>
 </body>
 </html>
