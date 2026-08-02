@@ -547,7 +547,7 @@
 <script>
 (() => {
   const LS_KEY = 'rizzTrainer.geminiKey';
-  const MODEL = 'gemini-2.0-flash';
+  const MODEL = 'gemini-3.6-flash';
 
   const state = {
     apiKey: localStorage.getItem(LS_KEY) || '',
@@ -775,8 +775,7 @@
       contents,
       generationConfig: {
         responseMimeType: 'application/json',
-        responseSchema: schema,
-        temperature: 0.9
+        responseSchema: schema
       }
     };
     const res = await fetch(url, {
