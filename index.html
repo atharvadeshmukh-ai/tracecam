@@ -569,6 +569,44 @@
   .rewrite-box h4 .swipe-hint{
     color:var(--text-faint); text-transform:none; letter-spacing:0; font-size:10.5px; font-weight:500;
   }
+
+  .rewrites-container{
+    margin-bottom:14px;
+  }
+
+  .rewrite-tabs{
+    display:flex; gap:8px; margin-bottom:12px;
+    border-bottom:1px solid var(--border);
+    padding-bottom:8px;
+  }
+  .rewrite-tab{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--text-faint);
+    font-size:12px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    padding:8px 0;
+    cursor:pointer;
+    transition:.15s;
+    position:relative;
+  }
+  .rewrite-tab:hover{ color:var(--text-muted); }
+  .rewrite-tab.active{
+    color:var(--accent);
+  }
+  .rewrite-tab.active::after{
+    content:'';
+    position:absolute;
+    bottom:-9px;
+    left:0;
+    right:0;
+    height:2px;
+    background:var(--accent);
+  }
+
   .rewrite-track-wrap{ overflow:hidden; touch-action:pan-y; cursor:grab; }
   .rewrite-track{
     display:flex;
@@ -907,7 +945,7 @@
 <script>
 (() => {
   const LS_KEY = 'rizzTrainer.geminiKey';
-  const MODEL = 'gemini-3.5-flash-lite';
+  const MODEL = 'gemini-1.5-flash';
 
   const state = {
     apiKey: localStorage.getItem(LS_KEY) || '',
@@ -1301,9 +1339,15 @@
   function renderAnalysis(result, originalText){
     const tier = tierFor(result.score);
     const {c, filled} = circleDasharray(result.score);
-    const rewrites = (Array.isArray(result.rewrites) && result.rewrites.length)
-      ? result.rewrites
-      : [result.rewrite || 'No rewrite returned.'];
+    
+    // Handle both new format (refinements + alternatives) and old format (rewrites)
+    const refinements = (Array.isArray(result.refinements) && result.refinements.length) ? result.refinements : [];
+    const alternatives = (Array.isArray(result.alternatives) && result.alternatives.length) ? result.alternatives : [];
+    const allRewrites = Array.isArray(result.rewrites) ? result.rewrites : [];
+    const rewrites = (refinements.length > 0 || alternatives.length > 0) 
+      ? [...refinements, ...alternatives]
+      : (allRewrites.length > 0 ? allRewrites : ['No rewrites returned.']);
+    
     const gp = result.goalProgress || null;
     const gpColor = gp ? (GOAL_STATUS_COLOR[gp.status] || 'var(--text-muted)') : 'var(--text-muted)';
     const goalBlockHTML = state.goal ? `
@@ -1363,22 +1407,31 @@
         ${weaknessesHTML ? `<div class="fb-section"><h4>What's weak</h4><div class="fb-list">${weaknessesHTML}</div></div>` : ''}
         ${factorsHTML ? `<div class="fb-section"><h4>Factor read</h4>${factorsHTML}</div>` : ''}
 
-        <div class="rewrite-box" id="rewriteBox">
-          <h4>Rewritten version <span class="swipe-hint">swipe for another ↔</span></h4>
-          <div class="rewrite-track-wrap">
-            <div class="rewrite-track" id="rewriteTrack">
-              ${rewrites.map(r => `<p class="rewrite-slide">${escapeHTML(r)}</p>`).join('')}
+        <div class="rewrites-container">
+          <h4 style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); margin-bottom:12px;">
+            Choose your move (${rewrites.length} options)
+          </h4>
+          <div class="rewrite-tabs" id="rewriteTabs">
+            ${refinements.length > 0 ? `<button class="rewrite-tab active" data-tab="refinements">My text, better</button>` : ''}
+            ${alternatives.length > 0 ? `<button class="rewrite-tab${refinements.length === 0 ? ' active' : ''}" data-tab="alternatives">Fresh alternatives</button>` : ''}
+          </div>
+          <div class="rewrite-box" id="rewriteBox">
+            <h4>Message preview <span class="swipe-hint">swipe ↔</span></h4>
+            <div class="rewrite-track-wrap">
+              <div class="rewrite-track" id="rewriteTrack">
+                ${rewrites.map(r => `<p class="rewrite-slide">${escapeHTML(r)}</p>`).join('')}
+              </div>
+            </div>
+            <div class="rewrite-dots" id="rewriteDots">
+              ${rewrites.map((_, i) => `<span class="rdot${i===0?' active':''}"></span>`).join('')}
             </div>
           </div>
-          <div class="rewrite-dots" id="rewriteDots">
-            ${rewrites.map((_, i) => `<span class="rdot${i===0?' active':''}"></span>`).join('')}
-          </div>
-        </div>
 
-        <div class="panel-actions">
-          <button class="btn primary" id="useRewriteBtn">Send this rewrite</button>
-          <button class="btn" id="sendOriginalBtn">Send my original anyway</button>
-          <button class="btn ghost" id="rewriteMoreBtn">Go back and edit</button>
+          <div class="panel-actions">
+            <button class="btn primary" id="useRewriteBtn">Send this message</button>
+            <button class="btn" id="sendOriginalBtn">Send my original anyway</button>
+            <button class="btn ghost" id="rewriteMoreBtn">Go back and edit</button>
+          </div>
         </div>
       </div>
     `;
@@ -1391,12 +1444,31 @@
     let activeIdx = 0;
     const track = document.getElementById('rewriteTrack');
     const dots = [...document.querySelectorAll('#rewriteDots .rdot')];
-
+    const tabs = [...document.querySelectorAll('.rewrite-tab')];
+    
     function goTo(idx){
       activeIdx = Math.max(0, Math.min(rewrites.length - 1, idx));
       track.style.transform = `translateX(-${activeIdx * 100}%)`;
       dots.forEach((d,i) => d.classList.toggle('active', i === activeIdx));
+      // update active tab based on index
+      const refineCount = refinements.length;
+      tabs.forEach(t => {
+        const isRefine = t.dataset.tab === 'refinements';
+        const isInThisTab = isRefine ? activeIdx < refineCount : activeIdx >= refineCount;
+        t.classList.toggle('active', isInThisTab);
+      });
     }
+
+    // Tab switching
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabType = tab.dataset.tab;
+        if(tabType === 'refinements') goTo(0);
+        else goTo(refinements.length);
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
 
     if(rewrites.length > 1){
       const box = document.getElementById('rewriteBox');
@@ -1482,7 +1554,16 @@
       verdict: { type: 'STRING' },
       strengths: { type: 'ARRAY', items: { type: 'STRING' } },
       weaknesses: { type: 'ARRAY', items: { type: 'STRING' } },
-      rewrites: { type: 'ARRAY', items: { type: 'STRING' } },
+      refinements: {
+        type: 'ARRAY',
+        items: { type: 'STRING' },
+        description: 'Exactly 3 improved versions of what he actually wrote'
+      },
+      alternatives: {
+        type: 'ARRAY',
+        items: { type: 'STRING' },
+        description: 'Exactly 3 completely fresh alternative approaches that work in this context'
+      },
       stage: {
         type: 'STRING',
         enum: ['Interest','Comfort','Momentum','Soft Lead','Clear Ask','Achieved']
@@ -1508,7 +1589,7 @@
         }
       }
     },
-    required: ['score','verdict','strengths','weaknesses','rewrites','stage','stageNote','goalProgress']
+    required: ['score','verdict','strengths','weaknesses','refinements','alternatives','stage','stageNote','goalProgress']
   };
 
   const REPLY_SCHEMA = {
@@ -1597,7 +1678,9 @@ Score bands: 80-100 High Rizz, 65-79 Solid, 50-64 Average, 30-49 Low, 0-29 Damag
 
 Give 2-4 short, specific strengths (empty array if truly none) and 2-4 short, specific weaknesses (empty array if truly none) — reference the actual words he used, not generic advice.
 
-Always provide "rewrites": exactly 3 improved versions of the message that each keep his intent and voice but fix the weaknesses — punchy, natural texting style, not corny, no emojis unless the original had a natural place for one. Make the 3 versions meaningfully different from each other in approach (e.g. more playful vs. more direct vs. more curious), not just reworded copies of the same line. At least one of the 3 rewrites should actively push toward the stated goal where it makes sense given how far along the conversation is — don't force a goal-ask if it's premature (e.g. don't ask for a date on message one), but nudge the trajectory that direction. Also, make sure the rewrites keep him moving toward the next stage if he's stuck in a stage.
+Always provide "refinements": exactly 3 improved versions that keep his core message and intent but polish the execution — punchy, natural texting style, not corny. Each should be a distinct take on the same idea (e.g., more playful vs. more direct vs. more curious), but all rooted in what he actually tried to say.
+
+Always provide "alternatives": exactly 3 completely fresh approaches that would work in this context regardless of what he typed. These should be based on the conversation stage, goal, and what actually lands well with her. Think: what would you actually say here if you were coaching him from scratch? Make these measurably different from each other (one teasing, one inquisitive, one bold). Don't reference his original message — just give what works in the situation.
 
 Always provide "goalProgress": assess how close the conversation (including this draft message) is to actually achieving the stated goal.
 - "status" must be exactly one of: Achieved, On Track, Stalling, Off Track.
