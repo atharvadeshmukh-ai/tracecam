@@ -61,6 +61,9 @@
     padding:14px 20px;
     display:flex; align-items:center; gap:18px;
   }
+  @media (max-width:900px){
+    .header-inner{ padding:10px 16px; gap:12px; }
+  }
   .wordmark{
     font-family:'Bricolage Grotesque',sans-serif;
     font-weight:800;
@@ -68,6 +71,9 @@
     letter-spacing:-0.02em;
     white-space:nowrap;
     display:flex; align-items:baseline; gap:2px;
+  }
+  @media (max-width:900px){
+    .wordmark{ font-size:18px; }
   }
   .wordmark .r{ color:var(--accent); }
 
@@ -78,10 +84,13 @@
     gap:14px;
     min-width:0;
   }
+  @media (max-width:900px){
+    .vitals{ gap:10px; }
+  }
   .pulse-wrap{
     flex:1;
     height:34px;
-    min-width:60px;
+    min-width:40px;
     position:relative;
     overflow:hidden;
   }
@@ -104,22 +113,36 @@
     white-space:nowrap;
     flex-shrink:0;
   }
+  @media (max-width:900px){
+    .score-chip{ padding:6px 10px; font-size:12px; }
+  }
   .score-chip .num{
     font-family:'JetBrains Mono',monospace;
     font-weight:600;
     font-size:15px;
   }
+  @media (max-width:900px){
+    .score-chip .num{ font-size:13px; }
+  }
   .score-chip .lbl{ font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; }
+  @media (max-width:900px){
+    .score-chip .lbl{ font-size:9px; letter-spacing:.03em; }
+  }
 
   .icon-btn{
     background:var(--surface);
     border:1px solid var(--border);
     color:var(--text-muted);
-    width:38px; height:38px;
+    width:44px; height:44px;
     border-radius:10px;
     display:flex; align-items:center; justify-content:center;
     flex-shrink:0;
     transition:.15s;
+    min-width:44px;
+    min-height:44px;
+  }
+  @media (max-width:900px){
+    .icon-btn{ width:48px; height:48px; min-width:48px; min-height:48px; }
   }
   .icon-btn:hover{ color:var(--text); border-color:var(--text-faint); }
   .icon-btn svg{ width:18px; height:18px; }
@@ -151,37 +174,53 @@
     border-bottom:1px solid var(--border);
     display:flex; align-items:center; gap:10px;
   }
+  @media (max-width:900px){
+    .scenario-bar{ flex-wrap:wrap; gap:8px; }
+  }
   .scenario-bar select{
     background:var(--surface);
     border:1px solid var(--border);
     color:var(--text);
-    padding:8px 12px;
+    padding:11px 13px;
     border-radius:10px;
     font-size:13px;
     flex:1;
+    min-width:160px;
+    min-height:44px;
+  }
+  @media (max-width:900px){
+    .scenario-bar select{ flex:1 1 100%; min-width:unset; }
   }
   .reset-btn{
     background:transparent;
     border:1px solid var(--border);
     color:var(--text-muted);
     font-size:12px;
-    padding:8px 12px;
+    padding:11px 13px;
     border-radius:10px;
+    min-height:44px;
     transition:.15s;
+    white-space:nowrap;
+  }
+  @media (max-width:900px){
+    .reset-btn{ flex:0 1 auto; }
   }
   .reset-btn:hover{ color:var(--bad); border-color:var(--bad); }
   .goal-chip{
-    display:flex; align-items:center; gap:7px;
+    display:flex; align-items:center; justify-content:center; gap:7px;
     background:var(--surface);
     border:1px solid var(--border);
     color:var(--text-muted);
-    padding:8px 12px;
+    padding:11px 13px;
     border-radius:10px;
     font-size:12.5px;
-    max-width:200px;
-    flex-shrink:1;
-    min-width:0;
+    min-height:44px;
+    min-width:120px;
+    flex-shrink:0;
     transition:.15s;
+  }
+  @media (max-width:900px){
+    .goal-chip{ flex:1; min-width:unset; }
   }
   .goal-chip:hover{ border-color:var(--accent); color:var(--text); }
   .goal-chip svg{ flex-shrink:0; color:var(--accent); }
@@ -248,6 +287,9 @@
     gap:12px;
     min-height:280px;
   }
+  @media (max-width:900px){
+    .chat-scroll{ padding:16px 16px; gap:10px; }
+  }
   .msg{
     max-width:78%;
     padding:11px 15px;
@@ -255,6 +297,9 @@
     font-size:14.5px;
     line-height:1.5;
     animation:pop .25s ease;
+  }
+  @media (max-width:900px){
+    .msg{ max-width:85%; font-size:15px; padding:10px 14px; }
   }
   @keyframes pop{ from{opacity:0; transform:translateY(6px) scale(.98);} to{opacity:1; transform:none;} }
   .msg.her{
@@ -275,6 +320,9 @@
     letter-spacing:.08em;
     color:var(--text-faint);
     margin:2px 4px;
+  }
+  @media (max-width:900px){
+    .msg-name{ font-size:9px; }
   }
   .msg.user + .msg-name, .name-row.user{ text-align:right; }
 
@@ -312,8 +360,14 @@
     padding:14px 20px 18px;
     background:var(--bg-elev);
   }
+  @media (max-width:900px){
+    .dock{ padding:10px 16px 16px; }
+  }
   .input-row{
     display:flex; gap:10px; align-items:flex-end;
+  }
+  @media (max-width:900px){
+    .input-row{ gap:8px; }
   }
   .input-row textarea{
     flex:1;
@@ -329,21 +383,32 @@
     min-height:44px;
     transition:border-color .15s;
   }
+  @media (max-width:900px){
+    .input-row textarea{ font-size:15px; }
+  }
   .input-row textarea:focus{ outline:none; border-color:var(--accent); }
   .send-btn{
     background:var(--accent);
     color:#fff;
     border:none;
     border-radius:14px;
-    width:48px; height:44px;
+    width:48px; height:48px;
     display:flex; align-items:center; justify-content:center;
     flex-shrink:0;
     transition:.15s;
+    min-width:48px;
+    min-height:48px;
+  }
+  @media (max-width:900px){
+    .send-btn{ width:52px; height:52px; min-width:52px; min-height:52px; }
   }
   .send-btn:disabled{ background:var(--surface-2); color:var(--text-faint); cursor:not-allowed; }
   .send-btn:not(:disabled):hover{ filter:brightness(1.1); }
   .send-btn svg{ width:19px; height:19px; }
   .hint{ font-size:11px; color:var(--text-faint); margin-top:8px; }
+  @media (max-width:900px){
+    .hint{ font-size:10px; margin-top:6px; }
+  }
 
   /* ---------- ANALYSIS PANEL ---------- */
   .analysis-col{
@@ -367,6 +432,41 @@
       transition:transform .28s cubic-bezier(.32,.72,0,1);
     }
     .analysis-col.open{ transform:translateY(0); }
+    .analysis-col.open ~ .mobile-toggle{ opacity:0; pointer-events:none; }
+  }
+
+  .mobile-toggle{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    z-index:45;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:14px;
+    padding:13px 16px;
+    font-size:13px;
+    font-weight:700;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    box-shadow:0 8px 24px rgba(255,59,100,.35);
+    transition:.15s;
+    min-height:44px;
+    cursor:pointer;
+  }
+  @media (max-width:900px){
+    .mobile-toggle{
+      display:flex;
+    }
+  }
+  .mobile-toggle:active{
+    transform:scale(.95);
+  }
+  .mobile-toggle svg{
+    width:16px;
+    height:16px;
   }
 
   .panel-idle{
@@ -497,6 +597,10 @@
     background:var(--surface); color:var(--text);
     display:flex; align-items:center; justify-content:center; gap:8px;
     transition:.15s;
+    min-height:44px;
+  }
+  @media (max-width:900px){
+    .btn{ min-height:48px; padding:12px 16px; }
   }
   .btn:hover{ border-color:var(--text-faint); }
   .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -516,13 +620,93 @@
       box-shadow:0 8px 24px rgba(255,59,100,.35);
     }
   }
-  .scrim{
-    display:none;
+  .scrim.show{
+    display:block; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:49;
   }
-  @media (max-width:900px){
-    .scrim.show{
-      display:block; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:49;
-    }
+
+  .her-analysis-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0;
+  }
+  .her-analysis-card{
+    border:1px solid var(--border);
+    background:var(--surface);
+    border-radius:14px;
+    padding:14px;
+  }
+  .her-analysis-card .label{
+    font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--text-faint); margin-bottom:6px; display:block;
+  }
+  .her-analysis-card .value{
+    font-size:24px; font-weight:700; font-family:'Bricolage Grotesque',sans-serif;
+    margin-bottom:4px;
+  }
+  .her-analysis-card .note{
+    font-size:12px; color:var(--text-muted); line-height:1.4;
+  }
+  .interest-bar{
+    display:flex; gap:3px; margin-top:8px;
+  }
+  .interest-dot{
+    flex:1; height:4px; border-radius:2px; background:var(--border);
+  }
+  .interest-dot.filled{ background:var(--accent); }
+  .interest-dot.high{ background:var(--gold); }
+
+  .engagement-badge{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:99px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-top:6px;
+  }
+  .engagement-badge.easy{
+    background:var(--good); color:#0a0a0d;
+  }
+  .engagement-badge.moderate{
+    background:var(--warn); color:#0a0a0d;
+  }
+  .engagement-badge.hard{
+    background:var(--bad); color:#fff;
+  }
+
+  .signals-block{
+    margin:14px 0;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:var(--surface);
+  }
+  .signals-block h4{
+    font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--text-faint); margin-bottom:8px;
+  }
+  .signals-list{
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .signal-item{
+    font-size:13px; line-height:1.5; color:var(--text); display:flex; gap:8px; align-items:flex-start;
+  }
+  .signal-item .icon{
+    font-size:14px; flex-shrink:0;
+  }
+
+  .next-move-block{
+    margin:14px 0;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid var(--accent);
+    background:var(--accent-soft);
+  }
+  .next-move-block h4{
+    font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--accent); margin-bottom:8px;
+  }
+  .next-move-block p{
+    font-size:13.5px; line-height:1.6; color:var(--text);
   }
 
   /* ---------- SETTINGS MODAL ---------- */
@@ -530,6 +714,9 @@
     position:fixed; inset:0; background:rgba(0,0,0,.6);
     display:none; align-items:center; justify-content:center; z-index:100;
     padding:20px;
+  }
+  @media (max-width:900px){
+    .modal-scrim{ padding:16px; }
   }
   .modal-scrim.show{ display:flex; }
   .modal{
@@ -539,9 +726,15 @@
     padding:26px;
     max-width:420px; width:100%;
   }
+  @media (max-width:900px){
+    .modal{ border-radius:16px; padding:20px; max-width:unset; }
+  }
   .modal h3{
     font-family:'Bricolage Grotesque',sans-serif;
     font-weight:800; font-size:19px; margin-bottom:6px;
+  }
+  @media (max-width:900px){
+    .modal h3{ font-size:18px; }
   }
   .modal p{ font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:16px; }
   .modal label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); display:block; margin-bottom:6px; }
@@ -550,9 +743,12 @@
     color:var(--text); padding:11px 13px; border-radius:10px; font-size:13.5px;
     margin-bottom:14px;
   }
+  @media (max-width:900px){
+    .modal input[type=password], .modal input[type=text]{ min-height:44px; }
+  }
   .modal input:focus{ outline:none; border-color:var(--accent); }
   .modal-actions{ display:flex; gap:10px; }
-  .modal-actions .btn{ flex:1; }
+  .modal-actions .btn{ flex:1; min-height:44px; }
   .key-link{ font-size:11.5px; color:var(--text-faint); }
   .key-link a{ color:var(--accent); text-decoration:none; }
 
@@ -644,6 +840,10 @@
   </section>
 </main>
 
+<button class="mobile-toggle" id="mobileToggle">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5m9-7H8m4 4v4"/></svg>
+  See feedback
+</button>
 <div class="scrim" id="scrim"></div>
 
 <div class="modal-scrim" id="modalScrim">
@@ -694,6 +894,16 @@
   </div>
 </div>
 
+<div class="modal-scrim" id="herAnalysisModalScrim">
+  <div class="modal" style="max-width:520px;">
+    <h3>Reading her response</h3>
+    <div id="herAnalysisContent"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn primary" id="herAnalysisClose">Got it</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (() => {
   const LS_KEY = 'rizzTrainer.geminiKey';
@@ -723,6 +933,7 @@
   const modalScrim = document.getElementById('modalScrim');
   const apiKeyInput = document.getElementById('apiKeyInput');
   const analysisCol = document.getElementById('analysisCol');
+  const mobileToggle = document.getElementById('mobileToggle');
   const scrim = document.getElementById('scrim');
   const scenarioSelect = document.getElementById('scenarioSelect');
   const noGoalBanner = document.getElementById('noGoalBanner');
@@ -735,6 +946,9 @@
   const goalModalSave = document.getElementById('goalModalSave');
   const openerModalScrim = document.getElementById('openerModalScrim');
   const openerList = document.getElementById('openerList');
+  const herAnalysisModalScrim = document.getElementById('herAnalysisModalScrim');
+  const herAnalysisContent = document.getElementById('herAnalysisContent');
+  const herAnalysisClose = document.getElementById('herAnalysisClose');
   const OPENER_PROMPTS = {
     opener: [
       {
@@ -818,6 +1032,74 @@
     openerModalScrim.classList.add('show');
   }
   openerSkip.addEventListener('click', () => openerModalScrim.classList.remove('show'));
+
+  herAnalysisClose.addEventListener('click', () => herAnalysisModalScrim.classList.remove('show'));
+  herAnalysisModalScrim.addEventListener('click', e => { if(e.target === herAnalysisModalScrim) herAnalysisModalScrim.classList.remove('show'); });
+
+  async function analyzeHerResponse(herMessage){
+    if(!state.apiKey){ openModal(); return; }
+    herAnalysisContent.innerHTML = `<div style="text-align:center; padding:20px;"><div style="animation:blink 1s infinite;">Reading...</div></div>`;
+    herAnalysisModalScrim.classList.add('show');
+    
+    try {
+      const contents = conversationAsContents(false);
+      const result = await callGemini(herResponseAnalysisPrompt(), contents, HER_RESPONSE_SCHEMA);
+      
+      const interestDots = Array(10).fill(0).map((_, i) => 
+        `<div class="interest-dot${i < Math.round(result.interestLevel.score) ? ' filled' : ''}"></div>`
+      ).join('');
+      
+      const engagementColor = result.engagement.level === 'Easy' ? 'easy' : 
+                              result.engagement.level === 'Moderate' ? 'moderate' : 'hard';
+      
+      const signalsHTML = result.signals.map(s => `
+        <div class="signal-item">
+          <span class="icon">→</span>
+          <span>${escapeHTML(s)}</span>
+        </div>
+      `).join('');
+      
+      herAnalysisContent.innerHTML = `
+        <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+          <div style="font-size:12px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;">Her response</div>
+          <div style="font-size:13.5px; line-height:1.6; color:var(--text); font-style:italic;">"${escapeHTML(herMessage)}"</div>
+        </div>
+
+        <div class="her-analysis-grid">
+          <div class="her-analysis-card">
+            <span class="label">Interest level</span>
+            <div class="value">${Math.round(result.interestLevel.score)}/10</div>
+            <div class="interest-bar">${interestDots}</div>
+            <div class="note">${escapeHTML(result.interestLevel.reasoning)}</div>
+          </div>
+
+          <div class="her-analysis-card">
+            <span class="label">Engagement</span>
+            <div class="engagement-badge ${engagementColor}">${escapeHTML(result.engagement.level)}</div>
+            <div class="note" style="margin-top:8px;">${escapeHTML(result.engagement.reasoning)}</div>
+          </div>
+        </div>
+
+        <div class="signals-block">
+          <h4>What she's signaling</h4>
+          <div class="signals-list">${signalsHTML}</div>
+        </div>
+
+        <div class="her-analysis-card" style="border-color:${result.goalAlignment.status === 'Moving closer' ? 'var(--good)' : result.goalAlignment.status === 'Neutral' ? 'var(--text-faint)' : 'var(--bad)'};">
+          <span class="label">Goal alignment</span>
+          <div class="value" style="color:${result.goalAlignment.status === 'Moving closer' ? 'var(--good)' : result.goalAlignment.status === 'Neutral' ? 'var(--text-muted)' : 'var(--bad)'}; font-size:16px;">${escapeHTML(result.goalAlignment.status)}</div>
+          <div class="note">${escapeHTML(result.goalAlignment.note)}</div>
+        </div>
+
+        <div class="next-move-block">
+          <h4>🎯 Next move</h4>
+          <p>${escapeHTML(result.nextMove)}</p>
+        </div>
+      `;
+    } catch(err) {
+      herAnalysisContent.innerHTML = `<div style="color:var(--bad); padding:14px;"><strong>Error:</strong> ${escapeHTML(err.message)}</div>`;
+    }
+  }
 
   function isMobile(){ return window.innerWidth <= 900; }
 
@@ -923,6 +1205,7 @@
   function hideAnalysisPanel(){
     if(isMobile()){ analysisCol.classList.remove('open'); scrim.classList.remove('show'); }
   }
+  mobileToggle.onclick = showAnalysisPanel;
   scrim.onclick = hideAnalysisPanel;
 
   // ---------- Chat rendering ----------
@@ -938,6 +1221,13 @@
     const bubble = document.createElement('div');
     bubble.className = 'msg ' + role;
     bubble.textContent = text;
+    if(role === 'her'){
+      bubble.style.cursor = 'pointer';
+      bubble.style.opacity = '0.85';
+      bubble.addEventListener('click', () => analyzeHerResponse(text));
+      bubble.addEventListener('mouseenter', () => bubble.style.opacity = '1');
+      bubble.addEventListener('mouseleave', () => bubble.style.opacity = '0.85');
+    }
     wrap.appendChild(name); wrap.appendChild(bubble);
     chatScroll.appendChild(wrap);
     chatScroll.scrollTop = chatScroll.scrollHeight;
@@ -1230,6 +1520,39 @@
     required: ['reply']
   };
 
+  const HER_RESPONSE_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+      interestLevel: {
+        type: 'OBJECT',
+        properties: {
+          score: { type: 'NUMBER' },
+          reasoning: { type: 'STRING' }
+        },
+        required: ['score','reasoning']
+      },
+      engagement: {
+        type: 'OBJECT',
+        properties: {
+          level: { type: 'STRING', enum: ['Easy','Moderate','Hard'] },
+          reasoning: { type: 'STRING' }
+        },
+        required: ['level','reasoning']
+      },
+      signals: { type: 'ARRAY', items: { type: 'STRING' } },
+      goalAlignment: {
+        type: 'OBJECT',
+        properties: {
+          status: { type: 'STRING', enum: ['Moving closer','Neutral','Moving away'] },
+          note: { type: 'STRING' }
+        },
+        required: ['status','note']
+      },
+      nextMove: { type: 'STRING' }
+    },
+    required: ['interestLevel','engagement','signals','goalAlignment','nextMove']
+  };
+
   const SCENARIO_CONTEXT = {
     opener: "This is a fresh match on a dating app (Hinge-style). There has been no conversation yet. The user is about to send the opening message.",
     midconvo: "This is an ongoing dating-app conversation that is going fine. The user needs to keep her engaged and build attraction.",
@@ -1299,6 +1622,28 @@ Rules:
 - Keep her replies to real texting length (usually under 30 words), casual, lowercase-leaning like real texting, no more than one emoji and only if it fits naturally.
 - Stay consistent with whatever personality/interests have emerged earlier in the conversation.
 - Return ONLY the JSON in the schema.`;
+  }
+
+  function herResponseAnalysisPrompt(){
+    return `You are a dating coach analyzing a woman's text response in a dating conversation. Based on the conversation history and her latest message, provide a deep read of:
+1. How interested she actually is (1-10 scale)
+2. How easy/hard she is to keep momentum with
+3. What signals her message is sending
+4. Whether the conversation is moving toward or away from the stated goal
+5. What the user should do next
+
+CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
+THE GOAL: "${state.goal ? state.goal.label : 'Build attraction'}"
+
+Analyze the tone, length, emoji usage (if any), response time signal (if inferrable), and what she's investing in the conversation.
+
+interestLevel.score (1-10): 1 = "not interested at all" through 10 = "very interested, seeking more"
+engagement.level: "Easy" = keeps the ball rolling, "Moderate" = requires effort but possible, "Hard" = conversation is stalling
+signals: List 2-4 specific behavioral signals (e.g., "asked him a question," "kept response short," "used friendly emoji," "revealed something personal")
+goalAlignment.status: is this message pushing them toward the goal or away from it?
+nextMove: one actionable sentence on what he should do next given this response
+
+Be brutally honest. Don't be overly optimistic or pessimistic — read what's actually there.`;
   }
 
   function conversationAsContents(includeDraft, draftText){
