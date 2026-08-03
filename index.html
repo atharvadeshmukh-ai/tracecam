@@ -170,6 +170,42 @@
     transition:.15s;
   }
   .reset-btn:hover{ color:var(--bad); border-color:var(--bad); }
+  .goal-chip{
+    display:flex; align-items:center; gap:7px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text-muted);
+    padding:8px 12px;
+    border-radius:10px;
+    font-size:12.5px;
+    max-width:200px;
+    flex-shrink:1;
+    min-width:0;
+    transition:.15s;
+  }
+  .goal-chip:hover{ border-color:var(--accent); color:var(--text); }
+  .goal-chip svg{ flex-shrink:0; color:var(--accent); }
+  .goal-chip span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .goal-chip.set{ color:var(--text); }
+
+  .goal-banner{ border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+  .goal-banner button{ color:var(--accent); }
+
+  .goal-templates{
+    display:flex; flex-direction:column; gap:8px; margin-bottom:14px;
+  }
+  .goal-template{
+    text-align:left;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:11px 13px;
+    border-radius:12px;
+    font-size:13.5px;
+    transition:.15s;
+  }
+  .goal-template:hover{ border-color:var(--text-faint); }
+  .goal-template.selected{ border-color:var(--accent); background:var(--accent-soft); }
 
   .chat-scroll{
     flex:1;
@@ -309,6 +345,27 @@
 
   .analysis-card{ display:flex; flex-direction:column; gap:18px; }
 
+  .goal-block{
+    display:flex; flex-direction:column; gap:6px;
+    padding:13px 15px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:var(--surface);
+  }
+  .goal-block .goal-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .goal-block .goal-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint);
+    display:flex; align-items:center; gap:6px;
+  }
+  .goal-status{
+    font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px;
+    white-space:nowrap;
+  }
+  .goal-block .goal-text{ font-size:13px; color:var(--text-muted); }
+  .goal-block .goal-note{ font-size:13.5px; line-height:1.5; }
+
   .verdict-block{
     display:flex; align-items:center; gap:16px;
     padding:18px;
@@ -375,8 +432,31 @@
   .rewrite-box h4{
     font-size:11px; text-transform:uppercase; letter-spacing:.08em;
     color:var(--accent); margin-bottom:8px;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
   }
-  .rewrite-box p{ font-size:14px; line-height:1.55; }
+  .rewrite-box h4 .swipe-hint{
+    color:var(--text-faint); text-transform:none; letter-spacing:0; font-size:10.5px; font-weight:500;
+  }
+  .rewrite-track-wrap{ overflow:hidden; touch-action:pan-y; cursor:grab; }
+  .rewrite-track{
+    display:flex;
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+  }
+  .rewrite-slide{
+    flex:0 0 100%;
+    font-size:14px; line-height:1.55;
+    padding-right:2px;
+  }
+  .rewrite-dots{
+    display:flex; gap:6px; justify-content:center; margin-top:12px;
+  }
+  .rdot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--border);
+    transition:.2s;
+    cursor:pointer;
+  }
+  .rdot.active{ background:var(--accent); width:16px; border-radius:3px; }
 
   .panel-actions{ display:flex; flex-direction:column; gap:8px; }
   .btn{
@@ -484,6 +564,10 @@
     <span>Add your Gemini API key to start training.</span>
     <button id="bannerAddKey">Add key</button>
   </div>
+  <div class="banner goal-banner" id="noGoalBanner" style="display:none;">
+    <span>Set a goal before your first message — analysis is measured against it.</span>
+    <button id="bannerAddGoal">Set goal</button>
+  </div>
 </header>
 
 <main>
@@ -495,12 +579,16 @@
         <option value="dateask">Going for the date ask</option>
         <option value="lowreply">She's gone a bit cold — dig out</option>
       </select>
+      <button class="goal-chip" id="goalChip" title="Set your goal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="13" height="13"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
+        <span id="goalChipLabel">No goal set</span>
+      </button>
       <button class="reset-btn" id="resetBtn">Reset chat</button>
     </div>
     <div class="chat-scroll" id="chatScroll">
       <div class="empty-state" id="emptyState">
-        <strong>Pick a scenario and send your first line.</strong>
-        Every message you send gets scored before it goes out. She replies based on how it actually lands.
+        <strong>Set a goal, pick a scenario, then send your first line.</strong>
+        Every message you send gets scored before it goes out, and checked against your goal. She replies based on how it actually lands.
       </div>
     </div>
     <div class="dock">
@@ -544,16 +632,40 @@
   </div>
 </div>
 
+<div class="modal-scrim" id="goalModalScrim">
+  <div class="modal">
+    <h3>What's the goal?</h3>
+    <p>Every message you send gets checked against this. Pick a template or write your own — this field is required before you can start chatting.</p>
+    <div class="goal-templates" id="goalTemplates">
+      <button class="goal-template" data-goal="Get her phone number">📱 Get her number</button>
+      <button class="goal-template" data-goal="Set up a coffee date">☕ Set up a coffee date</button>
+      <button class="goal-template" data-goal="Lock in a date this week with a day and time">📅 Lock in a real date</button>
+      <button class="goal-template" data-goal="Keep her engaged and build attraction without rushing anything">💬 Just build attraction</button>
+      <button class="goal-template" data-goal="Recover the conversation after she went cold">🧊 Re-spark a cold chat</button>
+      <button class="goal-template custom-toggle" data-goal="__custom__">✏️ Custom goal</button>
+    </div>
+    <div id="customGoalWrap" style="display:none;">
+      <label for="customGoalInput">Your goal</label>
+      <input type="text" id="customGoalInput" placeholder="e.g. get her to suggest hanging out first">
+    </div>
+    <div class="modal-actions" style="margin-top:6px;">
+      <button class="btn ghost" id="goalModalCancel">Cancel</button>
+      <button class="btn primary" id="goalModalSave" disabled>Save goal</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (() => {
   const LS_KEY = 'rizzTrainer.geminiKey';
-  const MODEL = 'gemini-3.6-flash';
+  const MODEL = 'gemini-3.5-flash-lite';
 
   const state = {
     apiKey: localStorage.getItem(LS_KEY) || '',
     messages: [],       // {role:'user'|'her', text}
     scores: [],
     scenario: 'opener',
+    goal: null,          // { label: string } — mandatory before sending
     pending: null,       // current analysis result awaiting a decision
     busy: false
   };
@@ -575,6 +687,14 @@
   const mobileToggle = document.getElementById('mobileToggle');
   const scrim = document.getElementById('scrim');
   const scenarioSelect = document.getElementById('scenarioSelect');
+  const noGoalBanner = document.getElementById('noGoalBanner');
+  const goalChip = document.getElementById('goalChip');
+  const goalChipLabel = document.getElementById('goalChipLabel');
+  const goalModalScrim = document.getElementById('goalModalScrim');
+  const goalTemplates = document.getElementById('goalTemplates');
+  const customGoalWrap = document.getElementById('customGoalWrap');
+  const customGoalInput = document.getElementById('customGoalInput');
+  const goalModalSave = document.getElementById('goalModalSave');
 
   function isMobile(){ return window.innerWidth <= 900; }
 
@@ -593,6 +713,81 @@
   };
   function refreshKeyBanner(){
     noKeyBanner.style.display = state.apiKey ? 'none' : 'flex';
+    updateSendEnabled();
+  }
+
+  // ---------- Goal modal ----------
+  let selectedGoalValue = null; // template text, or '__custom__'
+
+  function openGoalModal(){
+    goalModalScrim.classList.add('show');
+    // preselect existing goal if it matches a template, else treat as custom
+    const templates = [...goalTemplates.querySelectorAll('.goal-template')];
+    templates.forEach(b => b.classList.remove('selected'));
+    if(state.goal){
+      const match = templates.find(b => b.dataset.goal === state.goal.label);
+      if(match){
+        selectedGoalValue = match.dataset.goal;
+        match.classList.add('selected');
+        customGoalWrap.style.display = 'none';
+      } else {
+        selectedGoalValue = '__custom__';
+        templates.find(b => b.dataset.goal === '__custom__').classList.add('selected');
+        customGoalWrap.style.display = 'block';
+        customGoalInput.value = state.goal.label;
+      }
+    } else {
+      selectedGoalValue = null;
+      customGoalWrap.style.display = 'none';
+      customGoalInput.value = '';
+    }
+    validateGoalModal();
+  }
+  function closeGoalModal(){ goalModalScrim.classList.remove('show'); }
+
+  goalTemplates.querySelectorAll('.goal-template').forEach(btn => {
+    btn.addEventListener('click', () => {
+      goalTemplates.querySelectorAll('.goal-template').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedGoalValue = btn.dataset.goal;
+      customGoalWrap.style.display = selectedGoalValue === '__custom__' ? 'block' : 'none';
+      if(selectedGoalValue === '__custom__') customGoalInput.focus();
+      validateGoalModal();
+    });
+  });
+  customGoalInput.addEventListener('input', validateGoalModal);
+
+  function validateGoalModal(){
+    let valid = false;
+    if(selectedGoalValue === '__custom__') valid = customGoalInput.value.trim().length > 0;
+    else if(selectedGoalValue) valid = true;
+    goalModalSave.disabled = !valid;
+  }
+
+  document.getElementById('goalChip').onclick = openGoalModal;
+  document.getElementById('bannerAddGoal').onclick = openGoalModal;
+  document.getElementById('goalModalCancel').onclick = () => {
+    // only allow cancel if a goal is already set — otherwise it's mandatory
+    if(state.goal) closeGoalModal();
+  };
+  goalModalScrim.addEventListener('click', e => { if(e.target === goalModalScrim && state.goal) closeGoalModal(); });
+  goalModalSave.onclick = () => {
+    const label = selectedGoalValue === '__custom__' ? customGoalInput.value.trim() : selectedGoalValue;
+    if(!label) return;
+    state.goal = { label };
+    refreshGoalUI();
+    closeGoalModal();
+  };
+  function refreshGoalUI(){
+    if(state.goal){
+      goalChip.classList.add('set');
+      goalChipLabel.textContent = state.goal.label;
+      noGoalBanner.style.display = 'none';
+    } else {
+      goalChip.classList.remove('set');
+      goalChipLabel.textContent = 'No goal set';
+      noGoalBanner.style.display = 'flex';
+    }
     updateSendEnabled();
   }
 
@@ -682,9 +877,30 @@
     return {c, filled, r};
   }
 
+  const GOAL_STATUS_COLOR = {
+    'Achieved': 'var(--gold)',
+    'On Track': 'var(--good)',
+    'Stalling': 'var(--warn)',
+    'Off Track': 'var(--bad)'
+  };
+
   function renderAnalysis(result, originalText){
     const tier = tierFor(result.score);
     const {c, filled} = circleDasharray(result.score);
+    const rewrites = (Array.isArray(result.rewrites) && result.rewrites.length)
+      ? result.rewrites
+      : [result.rewrite || 'No rewrite returned.'];
+    const gp = result.goalProgress || null;
+    const gpColor = gp ? (GOAL_STATUS_COLOR[gp.status] || 'var(--text-muted)') : 'var(--text-muted)';
+    const goalBlockHTML = state.goal ? `
+      <div class="goal-block">
+        <div class="goal-row">
+          <span class="goal-label">🎯 Goal check</span>
+          ${gp ? `<span class="goal-status" style="background:${gpColor}22; color:${gpColor}">${escapeHTML(gp.status)}</span>` : ''}
+        </div>
+        <div class="goal-text">${escapeHTML(state.goal.label)}</div>
+        ${gp ? `<div class="goal-note">${escapeHTML(gp.note)}</div>` : ''}
+      </div>` : '';
     const strengthsHTML = (result.strengths||[]).map(s => `<div class="fb-item good"><span class="dot"></span><span>${escapeHTML(s)}</span></div>`).join('');
     const weaknessesHTML = (result.weaknesses||[]).map(s => `<div class="fb-item bad"><span class="dot"></span><span>${escapeHTML(s)}</span></div>`).join('');
 
@@ -720,17 +936,26 @@
           </div>
         </div>
 
+        ${goalBlockHTML}
+
         ${strengthsHTML ? `<div class="fb-section"><h4>What's working</h4><div class="fb-list">${strengthsHTML}</div></div>` : ''}
         ${weaknessesHTML ? `<div class="fb-section"><h4>What's weak</h4><div class="fb-list">${weaknessesHTML}</div></div>` : ''}
         ${factorsHTML ? `<div class="fb-section"><h4>Factor read</h4>${factorsHTML}</div>` : ''}
 
-        <div class="rewrite-box">
-          <h4>Rewritten version</h4>
-          <p>${escapeHTML(result.rewrite || '')}</p>
+        <div class="rewrite-box" id="rewriteBox">
+          <h4>Rewritten version <span class="swipe-hint">swipe for another ↔</span></h4>
+          <div class="rewrite-track-wrap">
+            <div class="rewrite-track" id="rewriteTrack">
+              ${rewrites.map(r => `<p class="rewrite-slide">${escapeHTML(r)}</p>`).join('')}
+            </div>
+          </div>
+          <div class="rewrite-dots" id="rewriteDots">
+            ${rewrites.map((_, i) => `<span class="rdot${i===0?' active':''}"></span>`).join('')}
+          </div>
         </div>
 
         <div class="panel-actions">
-          <button class="btn primary" id="useRewriteBtn">Send the rewrite</button>
+          <button class="btn primary" id="useRewriteBtn">Send this rewrite</button>
           <button class="btn" id="sendOriginalBtn">Send my original anyway</button>
           <button class="btn ghost" id="rewriteMoreBtn">Go back and edit</button>
         </div>
@@ -742,7 +967,44 @@
       if(fg) fg.style.strokeDashoffset = String(c - filled);
     });
 
-    document.getElementById('useRewriteBtn').onclick = () => confirmSend(result.rewrite, result.score);
+    let activeIdx = 0;
+    const track = document.getElementById('rewriteTrack');
+    const dots = [...document.querySelectorAll('#rewriteDots .rdot')];
+
+    function goTo(idx){
+      activeIdx = Math.max(0, Math.min(rewrites.length - 1, idx));
+      track.style.transform = `translateX(-${activeIdx * 100}%)`;
+      dots.forEach((d,i) => d.classList.toggle('active', i === activeIdx));
+    }
+
+    if(rewrites.length > 1){
+      const box = document.getElementById('rewriteBox');
+      let startX = 0, deltaX = 0, dragging = false;
+      const onStart = (x) => { dragging = true; startX = x; track.style.transition = 'none'; };
+      const onMove = (x) => {
+        if(!dragging) return;
+        deltaX = x - startX;
+        track.style.transform = `translateX(calc(-${activeIdx * 100}% + ${deltaX}px))`;
+      };
+      const onEnd = () => {
+        if(!dragging) return;
+        dragging = false;
+        track.style.transition = '';
+        if(deltaX < -40) goTo(activeIdx + 1);
+        else if(deltaX > 40) goTo(activeIdx - 1);
+        else goTo(activeIdx);
+        deltaX = 0;
+      };
+      box.addEventListener('touchstart', e => onStart(e.touches[0].clientX), {passive:true});
+      box.addEventListener('touchmove', e => onMove(e.touches[0].clientX), {passive:true});
+      box.addEventListener('touchend', onEnd);
+      box.addEventListener('mousedown', e => onStart(e.clientX));
+      window.addEventListener('mousemove', e => onMove(e.clientX));
+      window.addEventListener('mouseup', onEnd);
+      dots.forEach((d,i) => d.addEventListener('click', () => goTo(i)));
+    }
+
+    document.getElementById('useRewriteBtn').onclick = () => confirmSend(rewrites[activeIdx], result.score);
     document.getElementById('sendOriginalBtn').onclick = () => confirmSend(originalText, result.score);
     document.getElementById('rewriteMoreBtn').onclick = () => {
       msgInput.value = originalText;
@@ -799,7 +1061,15 @@
       verdict: { type: 'STRING' },
       strengths: { type: 'ARRAY', items: { type: 'STRING' } },
       weaknesses: { type: 'ARRAY', items: { type: 'STRING' } },
-      rewrite: { type: 'STRING' },
+      rewrites: { type: 'ARRAY', items: { type: 'STRING' } },
+      goalProgress: {
+        type: 'OBJECT',
+        properties: {
+          status: { type: 'STRING', enum: ['Achieved','On Track','Stalling','Off Track'] },
+          note: { type: 'STRING' }
+        },
+        required: ['status','note']
+      },
       factorNotes: {
         type: 'OBJECT',
         properties: {
@@ -812,7 +1082,7 @@
         }
       }
     },
-    required: ['score','verdict','strengths','weaknesses','rewrite']
+    required: ['score','verdict','strengths','weaknesses','rewrites','goalProgress']
   };
 
   const REPLY_SCHEMA = {
@@ -836,6 +1106,8 @@
 
 CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
 
+THE USER'S GOAL FOR THIS CONVERSATION: "${state.goal ? state.goal.label : 'Not set'}". Every message should ultimately be judged partly on whether it moves the conversation toward this goal, not just whether it's charming in a vacuum.
+
 Score from 0-100. Start at a baseline of 50 and adjust up or down based on these seven factors, weighing them holistically rather than mechanically:
 1. Length — shorter, punchier messages generally score better than long paragraphs.
 2. Open loop / ease of reply — does it give her something easy and specific to respond to?
@@ -849,7 +1121,12 @@ Score bands: 80-100 High Rizz, 65-79 Solid, 50-64 Average, 30-49 Low, 0-29 Damag
 
 Give 2-4 short, specific strengths (empty array if truly none) and 2-4 short, specific weaknesses (empty array if truly none) — reference the actual words he used, not generic advice.
 
-Always provide "rewrite": a single improved version of the message that keeps his intent and voice but fixes the weaknesses — punchy, natural texting style, not corny, no emojis unless the original had a natural place for one.
+Always provide "rewrites": exactly 3 improved versions of the message that each keep his intent and voice but fix the weaknesses — punchy, natural texting style, not corny, no emojis unless the original had a natural place for one. Make the 3 versions meaningfully different from each other in approach (e.g. more playful vs. more direct vs. more curious), not just reworded copies of the same line. At least one of the 3 rewrites should actively push toward the stated goal where it makes sense given how far along the conversation is — don't force a goal-ask if it's premature (e.g. don't ask for a date on message one), but nudge the trajectory that direction.
+
+Always provide "goalProgress": assess how close the conversation (including this draft message) is to actually achieving the stated goal.
+- "status" must be exactly one of: Achieved, On Track, Stalling, Off Track.
+- "Achieved" only if the goal has essentially already been secured (e.g. she gave her number, a date is confirmed).
+- "note" is one short, direct sentence (under 20 words) explaining the read — is this message helping or hurting the path to the goal, and what's the honest next step.
 
 Fill "factorNotes" with a very short (under 10 words each) note per factor.
 
@@ -890,6 +1167,7 @@ Rules:
     const text = msgInput.value.trim();
     if(!text || state.busy) return;
     if(!state.apiKey){ openModal(); return; }
+    if(!state.goal){ openGoalModal(); return; }
 
     state.busy = true;
     updateSendEnabled();
@@ -960,7 +1238,7 @@ Rules:
     msgInput.style.height = Math.min(120, msgInput.scrollHeight) + 'px';
   }
   function updateSendEnabled(){
-    sendBtn.disabled = state.busy || !msgInput.value.trim();
+    sendBtn.disabled = state.busy || !msgInput.value.trim() || !state.goal;
   }
   msgInput.addEventListener('input', () => { autosizeInput(); updateSendEnabled(); });
   msgInput.addEventListener('keydown', (e) => {
@@ -980,8 +1258,16 @@ Rules:
 
   // ---------- Init ----------
   refreshKeyBanner();
+  refreshGoalUI();
   updateScoreStrip();
-  if(!state.apiKey) setTimeout(openModal, 400);
+  if(!state.apiKey){
+    setTimeout(openModal, 400);
+  } else if(!state.goal){
+    setTimeout(openGoalModal, 400);
+  }
+  document.getElementById('modalSave').addEventListener('click', () => {
+    if(state.apiKey && !state.goal) setTimeout(openGoalModal, 250);
+  });
 })();
 </script>
 </body>
