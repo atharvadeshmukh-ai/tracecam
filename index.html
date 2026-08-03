@@ -207,6 +207,38 @@
   .goal-template:hover{ border-color:var(--text-faint); }
   .goal-template.selected{ border-color:var(--accent); background:var(--accent-soft); }
 
+  .opener-list{ display:flex; flex-direction:column; gap:8px; margin:12px 0; }
+  .opener-item{
+    text-align:left;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:11px 13px;
+    border-radius:12px;
+    font-size:13.5px;
+    line-height:1.5;
+    transition:.15s;
+    cursor:pointer;
+  }
+  .opener-item:hover{ border-color:var(--accent); background:var(--accent-soft); color:var(--text); }
+  .opener-item .opener-label{ font-weight:700; color:var(--accent); margin-bottom:3px; font-size:12px; }
+  .opener-item .opener-note{ font-size:12px; color:var(--text-muted); }
+
+  .stage-indicator{
+    display:flex; align-items:center; gap:12px;
+    padding:13px 15px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:var(--surface);
+    margin-bottom:14px;
+  }
+  .stage-track{
+    flex:1; display:flex; gap:4px;
+  }
+  .stage-dot{ width:8px; height:8px; border-radius:50%; background:var(--border); transition:.2s; }
+  .stage-dot.active{ background:var(--accent); width:24px; border-radius:3px; }
+  .stage-label{ font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+
   .chat-scroll{
     flex:1;
     overflow-y:auto;
@@ -612,10 +644,6 @@
   </section>
 </main>
 
-<button class="mobile-toggle" id="mobileToggle" style="display:none;">
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
-  View analysis
-</button>
 <div class="scrim" id="scrim"></div>
 
 <div class="modal-scrim" id="modalScrim">
@@ -655,6 +683,17 @@
   </div>
 </div>
 
+<div class="modal-scrim" id="openerModalScrim">
+  <div class="modal">
+    <h3 id="openerTitle">How to start</h3>
+    <p id="openerDesc">Pick one of these psychology-backed openers or jump in with your own.</p>
+    <div class="opener-list" id="openerList"></div>
+    <div class="modal-actions" style="margin-top:6px;">
+      <button class="btn ghost" id="openerSkip">Skip tips</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (() => {
   const LS_KEY = 'rizzTrainer.geminiKey';
@@ -684,7 +723,6 @@
   const modalScrim = document.getElementById('modalScrim');
   const apiKeyInput = document.getElementById('apiKeyInput');
   const analysisCol = document.getElementById('analysisCol');
-  const mobileToggle = document.getElementById('mobileToggle');
   const scrim = document.getElementById('scrim');
   const scenarioSelect = document.getElementById('scenarioSelect');
   const noGoalBanner = document.getElementById('noGoalBanner');
@@ -695,6 +733,91 @@
   const customGoalWrap = document.getElementById('customGoalWrap');
   const customGoalInput = document.getElementById('customGoalInput');
   const goalModalSave = document.getElementById('goalModalSave');
+  const openerModalScrim = document.getElementById('openerModalScrim');
+  const openerList = document.getElementById('openerList');
+  const OPENER_PROMPTS = {
+    opener: [
+      {
+        label: 'Photo-specific observation',
+        text: 'Reference something specific from her photos that shows you actually looked — a travel destination, an activity, a funny detail. Make it genuine.',
+        note: 'Psychology: people feel "seen" when you notice real details. Shows you\'re not mass-messaging.'
+      },
+      {
+        label: 'Playful assumption',
+        text: 'Make a light, teasing assumption about her based on her profile (e.g. "I have a theory about why you..." or "Betting you\'re the type who..."). Keep it positive.',
+        note: 'Psychology: humor + confidence signal. Gives her an easy, fun thing to respond to.'
+      },
+      {
+        label: 'Genuine question about her',
+        text: 'Ask something real about her interests, a photo, or something she wrote. Not a generic "how\'s your day" — something only she could answer.',
+        note: 'Psychology: shows interest. Easy for her to respond because she\'s the expert on herself.'
+      }
+    ],
+    midconvo: [
+      {
+        label: 'Playful callback',
+        text: 'Reference something funny or weird she said earlier and build a joke or tease around it. Shows you\'re actually tracking the conversation.',
+        note: 'Psychology: callbacks feel intimate and show attention. Momentum builder.'
+      },
+      {
+        label: 'Mild playful escalation',
+        text: 'Tease her about something she revealed, or flip the dynamic in a flirty way. Keep it light, not mean.',
+        note: 'Psychology: tension + humor = attraction. Signals confidence.'
+      },
+      {
+        label: 'Shared observation',
+        text: 'Comment on something you both just discussed, but add a novel angle or take. Keep the energy moving.',
+        note: 'Psychology: collaboration on banter feels good. Builds connection.'
+      }
+    ],
+    dateask: [
+      {
+        label: 'Soft lead with a place',
+        text: 'Mention a real place or activity casually — "there\'s this spot with..." or "never been to X but..." — without asking yet. See if she engages.',
+        note: 'Psychology: removes the pressure of a direct ask. She can lean in or stay neutral.'
+      },
+      {
+        label: 'Express genuine interest',
+        text: 'Tell her you\'d actually like to meet (be genuine, not pushy). Then pause and let her respond.',
+        note: 'Psychology: directness is attractive when it\'s not needy. Confidence play.'
+      },
+      {
+        label: 'Playful challenge',
+        text: 'Say something like "bold of you to think I\'d..." or "if you can..." — frame meeting as something she\'d be game for.',
+        note: 'Psychology: reverses pressure. Makes her want to prove she\'s up for it.'
+      }
+    ],
+    lowreply: [
+      {
+        label: 'Pattern interrupt',
+        text: 'Send something completely unexpected — a funny observation, a weird question, a callback to something old. Break the flat pattern.',
+        note: 'Psychology: novelty gets attention. Shows you\'re not boring.'
+      },
+      {
+        label: 'Vulnerability play',
+        text: 'Be genuine about something (without oversharing). Sometimes honesty cuts through platitudes.',
+        note: 'Psychology: real often beats clever. Disarms coldness.'
+      },
+      {
+        label: 'Reset to high-energy',
+        text: 'Act like nothing\'s wrong and re-engage with real playfulness or a strong observation. Ignore the flatness.',
+        note: 'Psychology: confidence is contagious. Don\'t validate the low energy.'
+      }
+    ]
+  };
+
+  function openOpenerModal(){
+    const prompts = OPENER_PROMPTS[state.scenario] || [];
+    openerList.innerHTML = prompts.map(p => `
+      <div class="opener-item" onclick="msgInput.value='${p.text.replace(/'/g, "\\'")}'; msgInput.focus(); openerModalScrim.classList.remove('show');">
+        <div class="opener-label">${escapeHTML(p.label)}</div>
+        <div class="opener-note">${escapeHTML(p.text)}</div>
+        <div style="font-size:10px; color:var(--text-faint); margin-top:5px;">${escapeHTML(p.note)}</div>
+      </div>
+    `).join('');
+    openerModalScrim.classList.add('show');
+  }
+  openerSkip.addEventListener('click', () => openerModalScrim.classList.remove('show'));
 
   function isMobile(){ return window.innerWidth <= 900; }
 
@@ -783,6 +906,8 @@
       goalChip.classList.add('set');
       goalChipLabel.textContent = state.goal.label;
       noGoalBanner.style.display = 'none';
+      // show openers if this is the first message
+      if(state.messages.length === 0) setTimeout(openOpenerModal, 250);
     } else {
       goalChip.classList.remove('set');
       goalChipLabel.textContent = 'No goal set';
@@ -798,7 +923,6 @@
   function hideAnalysisPanel(){
     if(isMobile()){ analysisCol.classList.remove('open'); scrim.classList.remove('show'); }
   }
-  mobileToggle.onclick = showAnalysisPanel;
   scrim.onclick = hideAnalysisPanel;
 
   // ---------- Chat rendering ----------
@@ -936,6 +1060,13 @@
           </div>
         </div>
 
+        <div class="stage-indicator">
+          <div class="stage-track">
+            ${['Interest','Comfort','Momentum','Soft Lead','Clear Ask','Achieved'].map(s => `<div class="stage-dot${s === result.stage ? ' active' : ''}"></div>`).join('')}
+          </div>
+          <div class="stage-label">${escapeHTML(result.stage)} — ${escapeHTML(result.stageNote)}</div>
+        </div>
+
         ${goalBlockHTML}
 
         ${strengthsHTML ? `<div class="fb-section"><h4>What's working</h4><div class="fb-list">${strengthsHTML}</div></div>` : ''}
@@ -1062,6 +1193,11 @@
       strengths: { type: 'ARRAY', items: { type: 'STRING' } },
       weaknesses: { type: 'ARRAY', items: { type: 'STRING' } },
       rewrites: { type: 'ARRAY', items: { type: 'STRING' } },
+      stage: {
+        type: 'STRING',
+        enum: ['Interest','Comfort','Momentum','Soft Lead','Clear Ask','Achieved']
+      },
+      stageNote: { type: 'STRING' },
       goalProgress: {
         type: 'OBJECT',
         properties: {
@@ -1082,7 +1218,7 @@
         }
       }
     },
-    required: ['score','verdict','strengths','weaknesses','rewrites','goalProgress']
+    required: ['score','verdict','strengths','weaknesses','rewrites','stage','stageNote','goalProgress']
   };
 
   const REPLY_SCHEMA = {
@@ -1108,6 +1244,23 @@ CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
 
 THE USER'S GOAL FOR THIS CONVERSATION: "${state.goal ? state.goal.label : 'Not set'}". Every message should ultimately be judged partly on whether it moves the conversation toward this goal, not just whether it's charming in a vacuum.
 
+=== THE PROGRESSION FORMULA ===
+There is a proven dating progression formula that works:
+1. Interest – Show you're actually paying attention to her (notice specific details about her profile, photos, or something she said)
+2. Comfort – Make the chat feel easy and low-pressure (be genuine, not salesy; give her easy things to respond to)
+3. Momentum – Keep the energy moving forward (playful banter, callbacks, building on what's working; avoid dead air)
+4. Soft Lead – Start pointing toward meeting without fully asking yet (casual mention of a place, vibe, activity; see if she leans in)
+5. Clear Ask – Direct but casual invitation with time + activity (specific day, time, place; no vagueness like "let's hang sometime")
+
+Evaluate which stage this message is at. Use the conversation history to judge:
+- If it's the first message, it should hit Interest (show you read her profile or photos carefully).
+- If there's been 2-3 turns of back-and-forth, you should be in Comfort or Momentum by now.
+- If the conversation has been going 5+ turns and flowing, a Soft Lead is appropriate (point toward meeting).
+- If she's responded positively to a soft lead, a Clear Ask (time + place) is the move.
+- If a date is confirmed or she gave her number, you've hit Achieved.
+
+Set "stage" to the correct stage this message represents. Set "stageNote" to a short (under 15 words) description of what this stage should accomplish and whether the message nails it or misses it.
+
 Score from 0-100. Start at a baseline of 50 and adjust up or down based on these seven factors, weighing them holistically rather than mechanically:
 1. Length — shorter, punchier messages generally score better than long paragraphs.
 2. Open loop / ease of reply — does it give her something easy and specific to respond to?
@@ -1121,7 +1274,7 @@ Score bands: 80-100 High Rizz, 65-79 Solid, 50-64 Average, 30-49 Low, 0-29 Damag
 
 Give 2-4 short, specific strengths (empty array if truly none) and 2-4 short, specific weaknesses (empty array if truly none) — reference the actual words he used, not generic advice.
 
-Always provide "rewrites": exactly 3 improved versions of the message that each keep his intent and voice but fix the weaknesses — punchy, natural texting style, not corny, no emojis unless the original had a natural place for one. Make the 3 versions meaningfully different from each other in approach (e.g. more playful vs. more direct vs. more curious), not just reworded copies of the same line. At least one of the 3 rewrites should actively push toward the stated goal where it makes sense given how far along the conversation is — don't force a goal-ask if it's premature (e.g. don't ask for a date on message one), but nudge the trajectory that direction.
+Always provide "rewrites": exactly 3 improved versions of the message that each keep his intent and voice but fix the weaknesses — punchy, natural texting style, not corny, no emojis unless the original had a natural place for one. Make the 3 versions meaningfully different from each other in approach (e.g. more playful vs. more direct vs. more curious), not just reworded copies of the same line. At least one of the 3 rewrites should actively push toward the stated goal where it makes sense given how far along the conversation is — don't force a goal-ask if it's premature (e.g. don't ask for a date on message one), but nudge the trajectory that direction. Also, make sure the rewrites keep him moving toward the next stage if he's stuck in a stage.
 
 Always provide "goalProgress": assess how close the conversation (including this draft message) is to actually achieving the stated goal.
 - "status" must be exactly one of: Achieved, On Track, Stalling, Off Track.
@@ -1250,11 +1403,6 @@ Rules:
   sendBtn.addEventListener('click', handleSend);
   document.getElementById('resetBtn').addEventListener('click', resetChat);
   scenarioSelect.addEventListener('change', () => { state.scenario = scenarioSelect.value; });
-
-  window.addEventListener('resize', () => {
-    mobileToggle.style.display = isMobile() ? 'flex' : 'none';
-  });
-  mobileToggle.style.display = isMobile() ? 'flex' : 'none';
 
   // ---------- Init ----------
   refreshKeyBanner();
