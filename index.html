@@ -1083,6 +1083,23 @@
       const contents = conversationAsContents(false);
       const result = await callGemini(herResponseAnalysisPrompt(), contents, HER_RESPONSE_SCHEMA);
       
+      // Validate result structure
+      if(!result || !result.interestLevel || typeof result.interestLevel.score !== 'number') {
+        throw new Error('Invalid response structure: missing interestLevel.score');
+      }
+      if(!result.engagement || !result.engagement.level) {
+        throw new Error('Invalid response structure: missing engagement.level');
+      }
+      if(!Array.isArray(result.signals)) {
+        throw new Error('Invalid response structure: signals is not an array');
+      }
+      if(!result.goalAlignment || !result.goalAlignment.status) {
+        throw new Error('Invalid response structure: missing goalAlignment.status');
+      }
+      if(!result.nextMove) {
+        throw new Error('Invalid response structure: missing nextMove');
+      }
+      
       const interestDots = Array(10).fill(0).map((_, i) => 
         `<div class="interest-dot${i < Math.round(result.interestLevel.score) ? ' filled' : ''}"></div>`
       ).join('');
@@ -1135,6 +1152,7 @@
         </div>
       `;
     } catch(err) {
+      console.error('Her response analysis error:', err);
       herAnalysisContent.innerHTML = `<div style="color:var(--bad); padding:14px;"><strong>Error:</strong> ${escapeHTML(err.message)}</div>`;
     }
   }
@@ -1337,7 +1355,15 @@
   };
 
   function renderAnalysis(result, originalText){
-    const tier = tierFor(result.score);
+    // Validate result
+    if(!result) {
+      analysisScroll.innerHTML = `<div style="color:var(--bad); padding:14px;"><strong>Error:</strong> No result returned from analysis</div>`;
+      return;
+    }
+    
+    console.log('Analysis result:', result);
+    
+    const tier = tierFor(result.score || 50);
     const {c, filled} = circleDasharray(result.score);
     
     // Handle both new format (refinements + alternatives) and old format (rewrites)
@@ -1544,15 +1570,26 @@
     const data = await res.json();
     const text = data?.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '{}';
     
-    // Extract JSON from response (handle markdown code blocks)
+    // Extract JSON from response with multiple strategies
     let jsonText = text;
+    
+    // Strategy 1: Look for markdown code blocks
     const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if(jsonMatch) jsonText = jsonMatch[1];
+    if(jsonMatch) {
+      jsonText = jsonMatch[1];
+    } else {
+      // Strategy 2: Look for JSON object directly
+      const objectMatch = text.match(/\{[\s\S]*\}/);
+      if(objectMatch) {
+        jsonText = objectMatch[0];
+      }
+    }
     
     try {
-      return JSON.parse(jsonText.trim());
+      const parsed = JSON.parse(jsonText.trim());
+      return parsed;
     } catch(e) {
-      console.error('JSON parse error:', e, 'Raw text:', text);
+      console.error('JSON parse error:', e.message, 'Attempted to parse:', jsonText.slice(0, 200));
       throw new Error(`Failed to parse JSON response: ${e.message}`);
     }
   }
