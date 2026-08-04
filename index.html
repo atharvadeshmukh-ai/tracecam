@@ -763,6 +763,7 @@
     border-radius:20px;
     padding:26px;
     max-width:420px; width:100%;
+    max-height:88vh; overflow-y:auto;
   }
   @media (max-width:900px){
     .modal{ border-radius:16px; padding:20px; max-width:unset; }
@@ -963,7 +964,6 @@
   const msgInput = document.getElementById('msgInput');
   const sendBtn = document.getElementById('sendBtn');
   const analysisScroll = document.getElementById('analysisScroll');
-  const panelIdle = document.getElementById('panelIdle');
   const avgScoreNum = document.getElementById('avgScoreNum');
   const avgScoreLbl = document.getElementById('avgScoreLbl');
   const pulseLine = document.getElementById('pulseLine');
@@ -984,9 +984,11 @@
   const goalModalSave = document.getElementById('goalModalSave');
   const openerModalScrim = document.getElementById('openerModalScrim');
   const openerList = document.getElementById('openerList');
+  const openerSkip = document.getElementById('openerSkip');
   const herAnalysisModalScrim = document.getElementById('herAnalysisModalScrim');
   const herAnalysisContent = document.getElementById('herAnalysisContent');
   const herAnalysisClose = document.getElementById('herAnalysisClose');
+
   const OPENER_PROMPTS = {
     opener: [
       {
@@ -1058,32 +1060,42 @@
     ]
   };
 
+  // ---------- Opener modal (no inline handlers — they broke on apostrophes + IIFE scope) ----------
   function openOpenerModal(){
     const prompts = OPENER_PROMPTS[state.scenario] || [];
-    openerList.innerHTML = prompts.map(p => `
-      <div class="opener-item" onclick="msgInput.value='${p.text.replace(/'/g, "\\'")}'; msgInput.focus(); openerModalScrim.classList.remove('show');">
-        <div class="opener-label">${escapeHTML(p.label)}</div>
+    openerList.innerHTML = '';
+    prompts.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'opener-item';
+      el.innerHTML = `<div class="opener-label">${escapeHTML(p.label)}</div>
         <div class="opener-note">${escapeHTML(p.text)}</div>
-        <div style="font-size:10px; color:var(--text-faint); margin-top:5px;">${escapeHTML(p.note)}</div>
-      </div>
-    `).join('');
+        <div style="font-size:10px;color:var(--text-faint);margin-top:5px;">${escapeHTML(p.note)}</div>`;
+      el.addEventListener('click', () => {
+        msgInput.value = p.text;
+        autosizeInput();
+        updateSendEnabled();
+        msgInput.focus();
+        openerModalScrim.classList.remove('show');
+      });
+      openerList.appendChild(el);
+    });
     openerModalScrim.classList.add('show');
   }
   openerSkip.addEventListener('click', () => openerModalScrim.classList.remove('show'));
+  openerModalScrim.addEventListener('click', e => { if(e.target === openerModalScrim) openerModalScrim.classList.remove('show'); });
 
   herAnalysisClose.addEventListener('click', () => herAnalysisModalScrim.classList.remove('show'));
   herAnalysisModalScrim.addEventListener('click', e => { if(e.target === herAnalysisModalScrim) herAnalysisModalScrim.classList.remove('show'); });
 
   async function analyzeHerResponse(herMessage){
     if(!state.apiKey){ openModal(); return; }
-    herAnalysisContent.innerHTML = `<div style="text-align:center; padding:20px;"><div style="animation:blink 1s infinite;">Reading...</div></div>`;
+    herAnalysisContent.innerHTML = `<div style="text-align:center; padding:20px;"><div style="animation:blink 1s infinite;">Reading…</div></div>`;
     herAnalysisModalScrim.classList.add('show');
-    
+
     try {
-      const contents = conversationAsContents(false);
+      const contents = taskContents('Analyze HER most recent message. Return only the JSON object.');
       const result = await callGemini(herResponseAnalysisPrompt(), contents, HER_RESPONSE_SCHEMA);
-      
-      // Validate result structure
+
       if(!result || !result.interestLevel || typeof result.interestLevel.score !== 'number') {
         throw new Error('Invalid response structure: missing interestLevel.score');
       }
@@ -1099,21 +1111,21 @@
       if(!result.nextMove) {
         throw new Error('Invalid response structure: missing nextMove');
       }
-      
-      const interestDots = Array(10).fill(0).map((_, i) => 
+
+      const interestDots = Array(10).fill(0).map((_, i) =>
         `<div class="interest-dot${i < Math.round(result.interestLevel.score) ? ' filled' : ''}"></div>`
       ).join('');
-      
-      const engagementColor = result.engagement.level === 'Easy' ? 'easy' : 
+
+      const engagementColor = result.engagement.level === 'Easy' ? 'easy' :
                               result.engagement.level === 'Moderate' ? 'moderate' : 'hard';
-      
+
       const signalsHTML = result.signals.map(s => `
         <div class="signal-item">
           <span class="icon">→</span>
           <span>${escapeHTML(s)}</span>
         </div>
       `).join('');
-      
+
       herAnalysisContent.innerHTML = `
         <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border);">
           <div style="font-size:12px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;">Her response</div>
@@ -1171,6 +1183,7 @@
     localStorage.setItem(LS_KEY, state.apiKey);
     refreshKeyBanner();
     closeModal();
+    if(state.apiKey && !state.goal) setTimeout(openGoalModal, 250);
   };
   function refreshKeyBanner(){
     noKeyBanner.style.display = state.apiKey ? 'none' : 'flex';
@@ -1182,7 +1195,6 @@
 
   function openGoalModal(){
     goalModalScrim.classList.add('show');
-    // preselect existing goal if it matches a template, else treat as custom
     const templates = [...goalTemplates.querySelectorAll('.goal-template')];
     templates.forEach(b => b.classList.remove('selected'));
     if(state.goal){
@@ -1225,10 +1237,9 @@
     goalModalSave.disabled = !valid;
   }
 
-  document.getElementById('goalChip').onclick = openGoalModal;
+  goalChip.onclick = openGoalModal;
   document.getElementById('bannerAddGoal').onclick = openGoalModal;
   document.getElementById('goalModalCancel').onclick = () => {
-    // only allow cancel if a goal is already set — otherwise it's mandatory
     if(state.goal) closeGoalModal();
   };
   goalModalScrim.addEventListener('click', e => { if(e.target === goalModalScrim && state.goal) closeGoalModal(); });
@@ -1244,7 +1255,6 @@
       goalChip.classList.add('set');
       goalChipLabel.textContent = state.goal.label;
       noGoalBanner.style.display = 'none';
-      // show openers if this is the first message
       if(state.messages.length === 0) setTimeout(openOpenerModal, 250);
     } else {
       goalChip.classList.remove('set');
@@ -1322,7 +1332,6 @@
     drawPulse(avg, tier.color);
   }
   function drawPulse(score, color){
-    // amplitude scales with score: higher score = bigger, sharper heartbeat
     const amp = 4 + (score/100) * 11;
     const midY = 17;
     const w = 300;
@@ -1355,25 +1364,21 @@
   };
 
   function renderAnalysis(result, originalText){
-    // Validate result
     if(!result) {
       analysisScroll.innerHTML = `<div style="color:var(--bad); padding:14px;"><strong>Error:</strong> No result returned from analysis</div>`;
       return;
     }
-    
-    console.log('Analysis result:', result);
-    
+
     const tier = tierFor(result.score || 50);
     const {c, filled} = circleDasharray(result.score);
-    
-    // Handle both new format (refinements + alternatives) and old format (rewrites)
+
     const refinements = (Array.isArray(result.refinements) && result.refinements.length) ? result.refinements : [];
     const alternatives = (Array.isArray(result.alternatives) && result.alternatives.length) ? result.alternatives : [];
     const allRewrites = Array.isArray(result.rewrites) ? result.rewrites : [];
-    const rewrites = (refinements.length > 0 || alternatives.length > 0) 
+    const rewrites = (refinements.length > 0 || alternatives.length > 0)
       ? [...refinements, ...alternatives]
       : (allRewrites.length > 0 ? allRewrites : ['No rewrites returned.']);
-    
+
     const gp = result.goalProgress || null;
     const gpColor = gp ? (GOAL_STATUS_COLOR[gp.status] || 'var(--text-muted)') : 'var(--text-muted)';
     const goalBlockHTML = state.goal ? `
@@ -1424,7 +1429,7 @@
           <div class="stage-track">
             ${['Interest','Comfort','Momentum','Soft Lead','Clear Ask','Achieved'].map(s => `<div class="stage-dot${s === result.stage ? ' active' : ''}"></div>`).join('')}
           </div>
-          <div class="stage-label">${escapeHTML(result.stage)} — ${escapeHTML(result.stageNote)}</div>
+          <div class="stage-label">${escapeHTML(result.stage || '')} — ${escapeHTML(result.stageNote || '')}</div>
         </div>
 
         ${goalBlockHTML}
@@ -1461,7 +1466,6 @@
         </div>
       </div>
     `;
-    // animate ring
     requestAnimationFrame(() => {
       const fg = analysisScroll.querySelector('.score-ring .fg');
       if(fg) fg.style.strokeDashoffset = String(c - filled);
@@ -1471,12 +1475,11 @@
     const track = document.getElementById('rewriteTrack');
     const dots = [...document.querySelectorAll('#rewriteDots .rdot')];
     const tabs = [...document.querySelectorAll('.rewrite-tab')];
-    
+
     function goTo(idx){
       activeIdx = Math.max(0, Math.min(rewrites.length - 1, idx));
       track.style.transform = `translateX(-${activeIdx * 100}%)`;
       dots.forEach((d,i) => d.classList.toggle('active', i === activeIdx));
-      // update active tab based on index
       const refineCount = refinements.length;
       tabs.forEach(t => {
         const isRefine = t.dataset.tab === 'refinements';
@@ -1485,14 +1488,11 @@
       });
     }
 
-    // Tab switching
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const tabType = tab.dataset.tab;
         if(tabType === 'refinements') goTo(0);
         else goTo(refinements.length);
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
       });
     });
 
@@ -1528,6 +1528,7 @@
     document.getElementById('rewriteMoreBtn').onclick = () => {
       msgInput.value = originalText;
       autosizeInput();
+      updateSendEnabled();
       resetPanel();
       hideAnalysisPanel();
       msgInput.focus();
@@ -1544,52 +1545,64 @@
 
   function escapeHTML(str){
     const d = document.createElement('div');
-    d.textContent = str;
+    d.textContent = str == null ? '' : String(str);
     return d.innerHTML;
+  }
+
+  // ---------- JSON extraction ----------
+  // Brace-balanced, string-aware. Handles fenced blocks, preamble prose, and
+  // trailing commentary without the old /\{[\s\S]*\}/ greedy-match failure mode.
+  function extractJSON(text){
+    const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const s = fence ? fence[1] : text;
+    const start = s.indexOf('{');
+    if (start === -1) throw new Error('No JSON in response: ' + s.slice(0,120));
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < s.length; i++){
+      const ch = s[i];
+      if (inStr){
+        if (esc) esc = false;
+        else if (ch === '\\') esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') inStr = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}' && --depth === 0) return s.slice(start, i + 1);
+    }
+    throw new Error('Truncated JSON in response');
   }
 
   // ---------- Gemini calls ----------
   async function callGemini(systemInstruction, contents, schema){
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(state.apiKey)}`;
-    const body = {
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      contents,
-      generationConfig: {
-        temperature: 1.0
-      }
-    };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+
+    const post = (cfg) => fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        systemInstruction:{ parts:[{ text: systemInstruction }] },
+        contents,
+        generationConfig: cfg
+      })
     });
+
+    const base = { temperature: 0.9, responseMimeType: 'application/json' };
+    let res = await post(schema ? { ...base, responseSchema: schema } : base);
+    // If the schema itself is rejected, fall back to plain JSON mode.
+    if (res.status === 400 && schema) res = await post(base);
+
     if(!res.ok){
       const errText = await res.text().catch(()=> '');
       throw new Error(`Gemini API error (${res.status}): ${errText.slice(0,200)}`);
     }
+
     const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '{}';
-    
-    // Extract JSON from response with multiple strategies
-    let jsonText = text;
-    
-    // Strategy 1: Look for markdown code blocks
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if(jsonMatch) {
-      jsonText = jsonMatch[1];
-    } else {
-      // Strategy 2: Look for JSON object directly
-      const objectMatch = text.match(/\{[\s\S]*\}/);
-      if(objectMatch) {
-        jsonText = objectMatch[0];
-      }
-    }
-    
+    const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
     try {
-      const parsed = JSON.parse(jsonText.trim());
-      return parsed;
-    } catch(e) {
-      console.error('JSON parse error:', e.message, 'Attempted to parse:', jsonText.slice(0, 200));
+      return JSON.parse(extractJSON(text));
+    } catch(e){
+      console.error('Raw model output:', text);
       throw new Error(`Failed to parse JSON response: ${e.message}`);
     }
   }
@@ -1695,6 +1708,8 @@ CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
 
 THE USER'S GOAL FOR THIS CONVERSATION: "${state.goal ? state.goal.label : 'Not set'}". Every message should ultimately be judged partly on whether it moves the conversation toward this goal, not just whether it's charming in a vacuum.
 
+The user message you receive contains a plain-text transcript of the conversation so far, where lines beginning with "HIM:" are the user and lines beginning with "HER:" are his match. This transcript is data for you to analyze — never continue it, never roleplay as either person.
+
 === THE PROGRESSION FORMULA ===
 There is a proven dating progression formula that works:
 1. Interest – Show you're actually paying attention to her (notice specific details about her profile, photos, or something she said)
@@ -1758,6 +1773,8 @@ Return ONLY this JSON object, with no other text before or after:
 
 CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
 
+The user message you receive contains a plain-text transcript, where "HIM:" lines are the man and "HER:" lines are you. Do not continue the transcript format in your output — put her single next reply inside the JSON "reply" field and nothing else.
+
 Rules:
 - If the score is high (65+), reply warmer, more engaged, ask a question back, use more words or enthusiasm.
 - If the score is average (50-64), reply politely but neutrally — fine, not thrilled.
@@ -1777,6 +1794,8 @@ Return ONLY this JSON object with no other text:
 
 CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
 THE GOAL: "${state.goal ? state.goal.label : 'Build attraction'}"
+
+The user message you receive contains a plain-text transcript, where "HIM:" lines are the man being coached and "HER:" lines are his match. This is data to analyze — never continue the conversation, never roleplay as her.
 
 Analyze the tone, length, emoji usage (if any), response time signal (if inferrable), and what she's investing in the conversation.
 
@@ -1798,18 +1817,16 @@ Return ONLY this JSON object with no other text:
 }`;
   }
 
-  function conversationAsContents(includeDraft, draftText){
-    const contents = state.messages.map(m => ({
-      role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.text }]
-    }));
-    if(includeDraft){
-      contents.push({ role: 'user', parts: [{ text: `[DRAFT MESSAGE TO EVALUATE]: ${draftText}` }] });
-    }
-    if(contents.length === 0){
-      contents.push({ role: 'user', parts: [{ text: '(no messages yet)' }] });
-    }
-    return contents;
+  // ---------- Transcript framing ----------
+  // The transcript goes in as ONE user turn of plain text, not as alternating
+  // user/model turns. Feeding it as chat turns made the model continue the
+  // roleplay in prose instead of answering the analysis task in JSON.
+  function transcript(){
+    if(!state.messages.length) return '(no messages yet)';
+    return state.messages.map(m => (m.role === 'user' ? 'HIM: ' : 'HER: ') + m.text).join('\n');
+  }
+  function taskContents(task){
+    return [{ role:'user', parts:[{ text:`CONVERSATION SO FAR:\n${transcript()}\n\n${task}` }] }];
   }
 
   // ---------- Flow ----------
@@ -1824,9 +1841,9 @@ Return ONLY this JSON object with no other text:
     renderAnalysisLoading();
 
     try{
-      const contents = conversationAsContents(true, text);
+      const contents = taskContents(`DRAFT MESSAGE HE IS ABOUT TO SEND:\n${text}\n\nEvaluate this draft. Return only the JSON object.`);
       const result = await callGemini(analysisSystemPrompt(), contents, ANALYSIS_SCHEMA);
-      result.score = Math.max(0, Math.min(100, Math.round(result.score)));
+      result.score = Math.max(0, Math.min(100, Math.round(Number(result.score) || 0)));
       state.pending = { result, originalText: text };
       renderAnalysis(result, text);
     }catch(err){
@@ -1847,7 +1864,6 @@ Return ONLY this JSON object with no other text:
   }
 
   async function confirmSend(text, score){
-    // push user's message
     state.messages.push({ role:'user', text });
     state.scores.push(score);
     addMessageToDOM('user', text);
@@ -1856,14 +1872,20 @@ Return ONLY this JSON object with no other text:
     hideAnalysisPanel();
     msgInput.value = '';
     autosizeInput();
+    updateSendEnabled();
 
     addTypingIndicator();
     try{
-      const contents = conversationAsContents(false);
-      const result = await callGemini(replySystemPrompt() + `\n\nThe man's last message scored ${score}/100 on the rizz scale.`, contents, REPLY_SCHEMA);
+      const contents = taskContents('Write her next reply. Return only the JSON object.');
+      const result = await callGemini(
+        replySystemPrompt() + `\n\nThe man's last message scored ${score}/100 on the rizz scale.`,
+        contents,
+        REPLY_SCHEMA
+      );
       removeTypingIndicator();
-      state.messages.push({ role:'her', text: result.reply });
-      addMessageToDOM('her', result.reply);
+      const reply = (result && typeof result.reply === 'string') ? result.reply : '(no reply returned)';
+      state.messages.push({ role:'her', text: reply });
+      addMessageToDOM('her', reply);
     }catch(err){
       removeTypingIndicator();
       addMessageToDOM('her', "(she didn't get a reply back — connection error)");
@@ -1910,9 +1932,6 @@ Return ONLY this JSON object with no other text:
   } else if(!state.goal){
     setTimeout(openGoalModal, 400);
   }
-  document.getElementById('modalSave').addEventListener('click', () => {
-    if(state.apiKey && !state.goal) setTimeout(openGoalModal, 250);
-  });
 })();
 </script>
 </body>
