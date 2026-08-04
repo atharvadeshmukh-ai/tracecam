@@ -945,7 +945,7 @@
 <script>
 (() => {
   const LS_KEY = 'rizzTrainer.geminiKey';
-  const MODEL = 'gemini-1.5-flash';
+  const MODEL = 'gemini-3.5-flash';
 
   const state = {
     apiKey: localStorage.getItem(LS_KEY) || '',
@@ -1529,8 +1529,7 @@
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents,
       generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: schema
+        temperature: 1.0
       }
     };
     const res = await fetch(url, {
@@ -1544,7 +1543,18 @@
     }
     const data = await res.json();
     const text = data?.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '{}';
-    return JSON.parse(text);
+    
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonText = text;
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if(jsonMatch) jsonText = jsonMatch[1];
+    
+    try {
+      return JSON.parse(jsonText.trim());
+    } catch(e) {
+      console.error('JSON parse error:', e, 'Raw text:', text);
+      throw new Error(`Failed to parse JSON response: ${e.message}`);
+    }
   }
 
   const ANALYSIS_SCHEMA = {
@@ -1642,7 +1652,7 @@
   };
 
   function analysisSystemPrompt(){
-    return `You are a blunt, expert dating-app texting coach for straight men messaging women on apps like Hinge and Bumble. You evaluate a single message the user is about to send and return ONLY the JSON described by the schema — no prose outside it.
+    return `You are a blunt, expert dating-app texting coach for straight men messaging women on apps like Hinge and Bumble. You evaluate a single message the user is about to send and return ONLY valid JSON — no markdown, no code blocks, no preamble, no text outside the JSON object.
 
 CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
 
@@ -1689,11 +1699,25 @@ Always provide "goalProgress": assess how close the conversation (including this
 
 Fill "factorNotes" with a very short (under 10 words each) note per factor.
 
-Be direct and coach-like, not sycophantic. Do not invent conversation that hasn't happened.`;
+Be direct and coach-like, not sycophantic. Do not invent conversation that hasn't happened.
+
+Return ONLY this JSON object, with no other text before or after:
+{
+  "score": number,
+  "verdict": string,
+  "strengths": [string, ...],
+  "weaknesses": [string, ...],
+  "refinements": [string, string, string],
+  "alternatives": [string, string, string],
+  "stage": string,
+  "stageNote": string,
+  "goalProgress": {"status": string, "note": string},
+  "factorNotes": {"length": string, "openLoop": string, "tone": string, "pressure": string, "focus": string, "risk": string}
+}`;
   }
 
   function replySystemPrompt(){
-    return `You are simulating "Her" — a woman on a dating app receiving a message from a match. Given the conversation so far and a 0-100 quality score for the man's most recent message, write how she would realistically reply by text.
+    return `You are simulating "Her" — a woman on a dating app receiving a message from a match. Given the conversation so far and a 0-100 quality score for the man's most recent message, write how she would realistically reply by text. Return ONLY a JSON object with no other text.
 
 CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
 
@@ -1704,16 +1728,15 @@ Rules:
 - If the score is very low (0-29), reply cold, minimal, or borderline disengaged — but stay realistic and non-cartoonish, not cruel.
 - Keep her replies to real texting length (usually under 30 words), casual, lowercase-leaning like real texting, no more than one emoji and only if it fits naturally.
 - Stay consistent with whatever personality/interests have emerged earlier in the conversation.
-- Return ONLY the JSON in the schema.`;
+
+Return ONLY this JSON object with no other text:
+{
+  "reply": string
+}`;
   }
 
   function herResponseAnalysisPrompt(){
-    return `You are a dating coach analyzing a woman's text response in a dating conversation. Based on the conversation history and her latest message, provide a deep read of:
-1. How interested she actually is (1-10 scale)
-2. How easy/hard she is to keep momentum with
-3. What signals her message is sending
-4. Whether the conversation is moving toward or away from the stated goal
-5. What the user should do next
+    return `You are a dating coach analyzing a woman's text response in a dating conversation. Based on the conversation history and her latest message, provide a deep read. Return ONLY valid JSON with no other text.
 
 CONTEXT: ${SCENARIO_CONTEXT[state.scenario]}
 THE GOAL: "${state.goal ? state.goal.label : 'Build attraction'}"
@@ -1726,7 +1749,16 @@ signals: List 2-4 specific behavioral signals (e.g., "asked him a question," "ke
 goalAlignment.status: is this message pushing them toward the goal or away from it?
 nextMove: one actionable sentence on what he should do next given this response
 
-Be brutally honest. Don't be overly optimistic or pessimistic — read what's actually there.`;
+Be brutally honest. Don't be overly optimistic or pessimistic — read what's actually there.
+
+Return ONLY this JSON object with no other text:
+{
+  "interestLevel": {"score": number, "reasoning": string},
+  "engagement": {"level": string, "reasoning": string},
+  "signals": [string, ...],
+  "goalAlignment": {"status": string, "note": string},
+  "nextMove": string
+}`;
   }
 
   function conversationAsContents(includeDraft, draftText){
